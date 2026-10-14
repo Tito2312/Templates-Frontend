@@ -8,6 +8,7 @@ interface TemplateGridProps {
   copiedId: number | null;
   onCopy: (template: TemplateResponse) => void;
   onDelete: (id: number) => void;
+  onEdit?: (template: TemplateResponse) => void;
 }
 
 export const TemplateGrid: React.FC<TemplateGridProps> = ({
@@ -15,6 +16,7 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({
   copiedId,
   onCopy,
   onDelete,
+  onEdit,
 }) => {
   if (templates.length === 0) {
     return (
@@ -41,6 +43,7 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({
           isCopied={copiedId === template.id}
           onCopy={onCopy}
           onDelete={onDelete}
+          onEdit={onEdit}
         />
       ))}
     </div>

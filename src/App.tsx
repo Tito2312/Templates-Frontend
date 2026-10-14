@@ -8,13 +8,14 @@ import { ManageCategoriesModal } from './components/ui/ManageCategoriesModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { useTemplates } from './hooks/useTemplates';
 import { session } from './utils/session';
-import type { User } from './types';
+import type { User, TemplateResponse, TemplateRequest } from './types';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => session.getUser());
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<TemplateResponse | null>(null);
 
   const {
     templates,
@@ -31,6 +32,7 @@ export default function App() {
     handleCopy,
     handleDelete,
     handleCreate,
+    handleUpdate,
     refreshTemplates,
   } = useTemplates();
 
@@ -44,16 +46,34 @@ export default function App() {
   const handleLogout = () => {
     session.clearSession();
     setCurrentUser(null);
-    refreshTemplates(); 
-    setIsAuthModalOpen(true); 
+    setIsAuthModalOpen(true);
+  };
+
+  const handleOpenCreateModal = () => {
+    setEditingTemplate(null);
+    setIsTemplateModalOpen(true);
+  };
+
+  const handleOpenEditModal = (template: TemplateResponse) => {
+    setEditingTemplate(template);
+    setIsTemplateModalOpen(true);
+  };
+
+  const handleSubmitTemplate = async (data: Omit<TemplateRequest, 'userId'>) => {
+    if (editingTemplate) {
+      await handleUpdate(editingTemplate.id, data);
+    } else {
+      await handleCreate(data);
+    }
+    setEditingTemplate(null);
   };
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
-      {/* Encabezado con estado de Sesión */}
+      {/* Encabezado */}
       <Header
         currentUser={currentUser}
-        onOpenModal={() => setIsTemplateModalOpen(true)}
+        onOpenModal={handleOpenCreateModal}
         onOpenCategoriesModal={() => setIsCategoriesModalOpen(true)}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
@@ -104,17 +124,23 @@ export default function App() {
             copiedId={copiedId}
             onCopy={handleCopy}
             onDelete={handleDelete}
+            onEdit={handleOpenEditModal}
           />
         )}
       </main>
 
-      {/* Modal Nueva Plantilla */}
+      {/* Modal Crear / Editar Plantilla */}
       <NewTemplateModal
+        key={editingTemplate ? `edit-${editingTemplate.id}` : 'new-template'}
         isOpen={isTemplateModalOpen}
         brands={brands}
         categories={categories}
-        onClose={() => setIsTemplateModalOpen(false)}
-        onSubmit={handleCreate}
+        templateToEdit={editingTemplate}
+        onClose={() => {
+          setIsTemplateModalOpen(false);
+          setEditingTemplate(null);
+        }}
+        onSubmit={handleSubmitTemplate}
       />
 
       {/* Modal Marcas y Categorías */}

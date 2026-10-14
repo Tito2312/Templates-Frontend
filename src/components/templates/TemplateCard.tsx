@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, Check, Trash2, Tag, Briefcase, Eye, Pencil } from 'lucide-react';
+import { Copy, Check, Trash2, Pencil, Tag, Briefcase, Eye } from 'lucide-react';
 import type { TemplateResponse } from '../../types';
 
 interface TemplateCardProps {
@@ -15,31 +15,35 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
   isCopied,
   onCopy,
   onDelete,
-  onEdit
+  onEdit,
 }) => {
-
   return (
     <div className="bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 hover:border-indigo-500/50 rounded-2xl p-5 shadow-lg hover:shadow-indigo-500/10 transition-all duration-200 flex flex-col justify-between group">
       <div>
-        {/* Encabezado de la Tarjeta */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-        {onEdit && (
-          <button
-            onClick={() => onEdit(template)}
-            title="Editar plantilla"
-            className="text-slate-500 hover:text-indigo-400 p-1.5 rounded-lg hover:bg-indigo-500/10 transition"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-        )}
-        <button
-          onClick={() => onDelete(template.id)}
-          title="Eliminar plantilla"
-          className="text-slate-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
+        {/* Encabezado: Título bien visible y botones de acción */}
+        <div className="flex justify-between items-start gap-3 mb-3 border-b border-slate-700/50 pb-2">
+          <h3 className="font-bold text-slate-100 text-base leading-snug tracking-wide group-hover:text-indigo-300 transition">
+            {template.title}
+          </h3>
+          <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(template)}
+                title="Editar plantilla"
+                className="text-slate-400 hover:text-indigo-400 p-1.5 rounded-lg hover:bg-indigo-500/10 transition"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={() => onDelete(template.id)}
+              title="Eliminar plantilla"
+              className="text-slate-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
 
         {/* Badges de Marca y Categoría */}
         <div className="flex flex-wrap gap-2 mb-3">
