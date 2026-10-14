@@ -27,15 +27,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onLoginSuccess }) 
         const user = await userApi.register(username, email, password);
         session.setUser(user);
       } else {
-        const user = await userApi.login(username, password);
+        const user = await userApi.login(email, password);
         session.setUser(user);
       }
       onLoginSuccess();
     } catch (err) {
-      setError('Error en la autenticación. Revisa las credenciales.' + err);
+      console.error('Error de autenticación:', err);
+      setError('Error en la autenticación. Revisa las credenciales.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleMode = () => {
+    setIsRegister(!isRegister);
+    setError('');
   };
 
   return (
@@ -52,34 +58,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onLoginSuccess }) 
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">Usuario</label>
-            <input
-              type="text"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. jorge"
-              className="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-
+          {/* Campo Nombre de Usuario (Solo en Registro) */}
           {isRegister && (
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Correo Electrónico</label>
+              <label className="block text-xs font-medium text-slate-400 mb-1">
+                Nombre de Usuario
+              </label>
               <input
-                type="email"
+                type="text"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="correo@ejemplo.com"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Ej. jorge"
                 className="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
               />
             </div>
           )}
 
+          {/* Campo Correo Electrónico (Requerido tanto en Login como en Registro) */}
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">Contraseña</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              Correo Electrónico
+            </label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="correo@ejemplo.com"
+              className="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          {/* Campo Contraseña */}
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              Contraseña
+            </label>
             <input
               type="password"
               required
@@ -101,7 +116,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onLoginSuccess }) 
 
         <div className="text-center pt-2">
           <button
-            onClick={() => setIsRegister(!isRegister)}
+            type="button"
+            onClick={toggleMode}
             className="text-xs text-indigo-400 hover:underline"
           >
             {isRegister ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate aquí'}

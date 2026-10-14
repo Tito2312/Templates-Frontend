@@ -9,9 +9,9 @@ export const userApi = {
     return data;
   },
 
-  login: async (username: string, password: string): Promise<User> => {
+  login: async (email: string, password: string): Promise<User> => {
     const { data } = await httpClient.post<User>(
-      `/users/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+      `/users/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
     );
     return data;
   },
