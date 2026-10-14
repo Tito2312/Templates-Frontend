@@ -1,21 +1,18 @@
-import { httpClient } from './client';
-import { session } from '../utils/session';
+import { httpClient } from './httpClient';
 import type { Category } from '../types';
 
 export const categoryApi = {
-  getCategories: async (userId?: number): Promise<Category[]> => {
-    const activeUserId = userId ?? session.getUserId();
-    const { data } = await httpClient.get<Category[]>('/categories', {
-      params: { userId: activeUserId },
-    });
+  getCategories: async (): Promise<Category[]> => {
+    const { data } = await httpClient.get<Category[]>('/categories');
     return data;
   },
 
-  createCategory: async (name: string, userId?: number): Promise<Category> => {
-    const activeUserId = userId ?? session.getUserId();
-    const { data } = await httpClient.post<Category>('/categories', null, {
-      params: { userId: activeUserId, name },
-    });
+  createCategory: async (name: string): Promise<Category> => {
+    const { data } = await httpClient.post<Category>('/categories', { name });
     return data;
+  },
+
+  deleteCategory: async (id: number): Promise<void> => {
+    await httpClient.delete(`/categories/${id}`);
   },
 };
