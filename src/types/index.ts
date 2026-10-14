@@ -34,4 +34,5 @@ export interface TemplateRequest {
   imageUrl?: string | null;
   brandId?: number | null;
   categoryId?: number | null;
+  userId?: number;
 }

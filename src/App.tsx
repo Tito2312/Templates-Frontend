@@ -4,9 +4,18 @@ import { SearchBar } from './components/ui/SearchBar';
 import { FilterSelect } from './components/ui/FilterSelect';
 import { TemplateGrid } from './components/templates/TemplateGrid';
 import { NewTemplateModal } from './components/templates/NewTemplateModal';
+import { ManageCategoriesModal } from './components/ui/ManageCategoriesModal';
+import { AuthModal } from './components/auth/AuthModal';
 import { useTemplates } from './hooks/useTemplates';
+import { session } from './utils/session';
+import type { User } from './types';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<User | null>(() => session.getUser());
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
   const {
     templates,
     brands,
@@ -22,14 +31,31 @@ export default function App() {
     handleCopy,
     handleDelete,
     handleCreate,
+    refreshTemplates,
   } = useTemplates();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const handleLoginSuccess = () => {
+    const user = session.getUser();
+    setCurrentUser(user);
+    setIsAuthModalOpen(false);
+    refreshTemplates();
+  };
+
+  const handleLogout = () => {
+    session.clearSession();
+    setCurrentUser(null);
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
-      {/* Encabezado */}
-      <Header onOpenModal={() => setIsModalOpen(true)} />
+      {/* Encabezado con estado de Sesión */}
+      <Header
+        currentUser={currentUser}
+        onOpenModal={() => setIsTemplateModalOpen(true)}
+        onOpenCategoriesModal={() => setIsCategoriesModalOpen(true)}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
+      />
 
       {/* Contenido Principal */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
@@ -65,9 +91,9 @@ export default function App() {
           </div>
         </div>
 
-        {/* Indicador de Carga o Grid de Plantillas */}
+        {/* Grid de Plantillas */}
         {loading ? (
-          <div className="text-center py-12 text-slate-400 font-medium animate-pulse">
+          <div className="text-center py-12 text-slate-400 font-medium">
             Cargando plantillas...
           </div>
         ) : (
@@ -80,13 +106,26 @@ export default function App() {
         )}
       </main>
 
-      {/* Modal para Crear Plantilla */}
+      {/* Modal Nueva Plantilla */}
       <NewTemplateModal
-        isOpen={isModalOpen}
+        isOpen={isTemplateModalOpen}
         brands={brands}
         categories={categories}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => setIsTemplateModalOpen(false)}
         onSubmit={handleCreate}
+      />
+
+      {/* Modal Marcas y Categorías */}
+      <ManageCategoriesModal
+        isOpen={isCategoriesModalOpen}
+        onClose={() => setIsCategoriesModalOpen(false)}
+        onRefresh={refreshTemplates}
+      />
+
+      {/* Modal de Autenticación */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onLoginSuccess={handleLoginSuccess}
       />
     </div>
   );

@@ -1,16 +1,27 @@
-const USER_ID_KEY = 'sac_user_id';
+import type { User } from '../types';
 
 export const session = {
   getUserId: (): number => {
-    const id = localStorage.getItem(USER_ID_KEY);
-    return id ? Number(id) : 1; 
+    const id = localStorage.getItem('userId');
+    return id ? Number(id) : 1;
   },
 
   setUserId: (id: number): void => {
-    localStorage.setItem(USER_ID_KEY, id.toString());
+    localStorage.setItem('userId', id.toString());
+  },
+
+  setUser: (user: User): void => {
+    localStorage.setItem('userId', user.id.toString());
+    localStorage.setItem('user', JSON.stringify(user));
+  },
+
+  getUser: (): User | null => {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
   },
 
   clearSession: (): void => {
-    localStorage.removeItem(USER_ID_KEY);
+    localStorage.removeItem('userId');
+    localStorage.removeItem('user');
   },
 };
