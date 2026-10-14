@@ -1,27 +1,28 @@
 import type { User } from '../types';
 
+const USER_KEY = 'app_user';
+const TOKEN_KEY = 'app_jwt_token';
+
 export const session = {
-  getUserId: (): number => {
-    const id = localStorage.getItem('userId');
-    return id ? Number(id) : 1;
+  setUser: (user: User) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
   },
-
-  setUserId: (id: number): void => {
-    localStorage.setItem('userId', id.toString());
-  },
-
-  setUser: (user: User): void => {
-    localStorage.setItem('userId', user.id.toString());
-    localStorage.setItem('user', JSON.stringify(user));
-  },
-
   getUser: (): User | null => {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
   },
-
-  clearSession: (): void => {
-    localStorage.removeItem('userId');
-    localStorage.removeItem('user');
+  getUserId: (): number | null => {
+    const user = session.getUser();
+    return user ? user.id : null;
+  },
+  setToken: (token: string) => {
+    localStorage.setItem(TOKEN_KEY, token);
+  },
+  getToken: (): string | null => {
+    return localStorage.getItem(TOKEN_KEY);
+  },
+  clearSession: () => {
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(TOKEN_KEY);
   },
 };

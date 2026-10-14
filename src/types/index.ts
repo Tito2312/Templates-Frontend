@@ -36,3 +36,8 @@ export interface TemplateRequest {
   categoryId?: number | null;
   userId?: number;
 }
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
