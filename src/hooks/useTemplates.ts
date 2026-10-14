@@ -1,138 +1,139 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { TemplateResponse, TemplateRequest, Brand, Category } from '../types';
 import { templateApi } from '../api/templateApi';
 import { brandApi } from '../api/brandApi';
 import { categoryApi } from '../api/categoryApi';
 import { session } from '../utils/session';
+import type { TemplateResponse, Brand, Category, TemplateRequest } from '../types';
 
 export const useTemplates = () => {
   const [templates, setTemplates] = useState<TemplateResponse[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
 
-  // Estados de Filtros
-  const [query, setQuery] = useState<string>('');
-  const [selectedBrand, setSelectedBrand] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [query, setQuery] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
 
-  // Estados de Interfaz
   const [copiedId, setCopiedId] = useState<number | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
 
-  // Cargar catálogos de marcas y categorías al montar el hook
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadFilters = async () => {
-      try {
-        const [brandsData, categoriesData] = await Promise.all([
-          brandApi.getBrands(),
-          categoryApi.getCategories(),
-        ]);
-        if (isMounted) {
-          setBrands(brandsData);
-          setCategories(categoriesData);
-        }
-      } catch (err) {
-        console.error('Error al cargar marcas y categorías', err);
-      }
-    };
-
-    loadFilters();
-
-    return () => {
-      isMounted = false;
-    };
+  // Cargar metadatos (Marcas y Categorías) para eventos manuales
+  const fetchMetadata = useCallback(async () => {
+    if (!session.getUserId()) return;
+    try {
+      const [brandsData, categoriesData] = await Promise.all([
+        brandApi.getBrands(),
+        categoryApi.getCategories(),
+      ]);
+      setBrands(brandsData);
+      setCategories(categoriesData);
+    } catch (err) {
+      console.error('Error al cargar marcas/categorías', err);
+    }
   }, []);
 
-  // Búsqueda de plantillas
-  // Búsqueda de plantillas respetando el usuario de la sesión
-    const fetchTemplates = useCallback(async () => {
-      const activeUserId = session.getUserId();
-      if (!localStorage.getItem('userId')) {
-        setTemplates([]);
-        return;
-      }
+  // Cargar plantillas para eventos manuales (crear, editar, eliminar)
+  const fetchTemplates = useCallback(async () => {
+    if (!session.getUserId()) return;
+    setLoading(true);
+    try {
+      const data = await templateApi.searchTemplates(query, selectedBrand, selectedCategory);
+      setTemplates(data);
+    } catch (err) {
+      console.error('Error al consultar plantillas', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [query, selectedBrand, selectedCategory]);
 
+  // Refrescar metadatos y plantillas manualmente tras cambios
+  const refreshAll = useCallback(async () => {
+    await Promise.all([fetchMetadata(), fetchTemplates()]);
+  }, [fetchMetadata, fetchTemplates]);
+
+  // Limpiar estados al cerrar sesión
+  const clearData = useCallback(() => {
+    setTemplates([]);
+    setBrands([]);
+    setCategories([]);
+    setSelectedBrand('');
+    setSelectedCategory('');
+    setQuery('');
+  }, []);
+
+  // Efecto único de sincronización con la API (evita renders en cascada)
+  useEffect(() => {
+    let isActive = true;
+    const userId = session.getUserId();
+
+    if (!userId) {
+      return;
+    }
+
+    const loadData = async () => {
       setLoading(true);
       try {
-        const data = await templateApi.searchTemplates(query, selectedBrand, selectedCategory);
-        // Opcional: filtrar por el usuario activo si las plantillas son privadas por usuario
-        setTemplates(data);
+        const [brandsData, categoriesData, templatesData] = await Promise.all([
+          brandApi.getBrands(),
+          categoryApi.getCategories(),
+          templateApi.searchTemplates(query, selectedBrand, selectedCategory),
+        ]);
+
+        if (isActive) {
+          setBrands(brandsData);
+          setCategories(categoriesData);
+          setTemplates(templatesData);
+        }
       } catch (err) {
-        console.error('Error al consultar plantillas', err);
+        console.error('Error al consultar datos', err);
       } finally {
-        setLoading(false);
+        if (isActive) {
+          setLoading(false);
+        }
       }
-    }, [query, selectedBrand, selectedCategory]);
+    };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchTemplates();
-    }, 200);
+    loadData();
 
-    return () => clearTimeout(timer);
-  }, [fetchTemplates]);
+    return () => {
+      isActive = false;
+    };
+  }, [query, selectedBrand, selectedCategory]);
 
-  // Copia rápida + Incremento optimista (+1)
+  // Handlers para acciones CRUD
   const handleCopy = async (template: TemplateResponse) => {
     try {
       await navigator.clipboard.writeText(template.content);
-      setCopiedId(template.id);
-
       await templateApi.incrementUsage(template.id);
-
-      setTemplates((prev) =>
-        prev.map((t) =>
-          t.id === template.id ? { ...t, usageCount: t.usageCount + 1 } : t
-        )
-      );
-
-      setTimeout(() => setCopiedId(null), 1500);
+      setCopiedId(template.id);
+      setTimeout(() => setCopiedId(null), 2000);
+      fetchTemplates();
     } catch (err) {
-      console.error('Error al copiar el texto al portapapeles', err);
+      console.error('Error al copiar', err);
     }
   };
 
-  // Eliminar plantilla
   const handleDelete = async (id: number) => {
-    if (window.confirm('¿Deseas eliminar esta plantilla permanentemente?')) {
-      try {
-        await templateApi.deleteTemplate(id);
-        await fetchTemplates();
-      } catch (err) {
-        console.error('Error al eliminar la plantilla', err);
-      }
-    }
-  };
-
-  // Crear nueva plantilla inyectando el userId activo de la sesión
-  const handleCreate = async (payload: Omit<TemplateRequest, 'userId'>) => {
     try {
-      const activeUserId = session.getUserId();
-      await templateApi.createTemplate({
-        ...payload,
-        userId: activeUserId,
-      });
+      await templateApi.deleteTemplate(id);
       await fetchTemplates();
     } catch (err) {
-      console.error('Error al crear la plantilla', err);
-      throw err;
+      console.error('Error al eliminar', err);
     }
+  };
+
+  const handleCreate = async (payload: Omit<TemplateRequest, 'userId'>) => {
+    const activeUserId = session.getUserId();
+    if (!activeUserId) return;
+    await templateApi.createTemplate({ ...payload, userId: activeUserId });
+    await fetchTemplates();
   };
 
   const handleUpdate = async (id: number, payload: Omit<TemplateRequest, 'userId'>) => {
-    try {
-      const activeUserId = session.getUserId();
-      await templateApi.updateTemplate(id, {
-        ...payload,
-        userId: activeUserId,
-      });
-      await fetchTemplates();
-    } catch (err) {
-      console.error('Error al actualizar la plantilla', err);
-      throw err;
-    }
+    const activeUserId = session.getUserId();
+    if (!activeUserId) return;
+    await templateApi.updateTemplate(id, { ...payload, userId: activeUserId });
+    await fetchTemplates();
   };
 
   return {
@@ -151,6 +152,7 @@ export const useTemplates = () => {
     handleDelete,
     handleCreate,
     handleUpdate,
-    refreshTemplates: fetchTemplates,
+    refreshTemplates: refreshAll,
+    clearData,
   };
 };

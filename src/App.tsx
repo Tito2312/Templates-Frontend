@@ -34,18 +34,20 @@ export default function App() {
     handleCreate,
     handleUpdate,
     refreshTemplates,
+    clearData,
   } = useTemplates();
 
   const handleLoginSuccess = () => {
     const user = session.getUser();
     setCurrentUser(user);
     setIsAuthModalOpen(false);
-    refreshTemplates();
+    refreshTemplates(); 
   };
 
   const handleLogout = () => {
     session.clearSession();
     setCurrentUser(null);
+    clearData();
     setIsAuthModalOpen(true);
   };
 
