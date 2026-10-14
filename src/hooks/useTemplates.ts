@@ -100,7 +100,7 @@ export const useTemplates = () => {
     };
   }, [query, selectedBrand, selectedCategory]);
 
-  // Handlers para acciones CRUD
+  // Copia de texto directo
   const handleCopy = async (template: TemplateResponse) => {
     try {
       await navigator.clipboard.writeText(template.content);
@@ -110,6 +110,19 @@ export const useTemplates = () => {
       fetchTemplates();
     } catch (err) {
       console.error('Error al copiar', err);
+    }
+  };
+
+  // Copia de texto ya formateado con variables
+  const handleCopyFormatted = async (templateId: number, formattedContent: string) => {
+    try {
+      await navigator.clipboard.writeText(formattedContent);
+      await templateApi.incrementUsage(templateId);
+      setCopiedId(templateId);
+      setTimeout(() => setCopiedId(null), 2000);
+      fetchTemplates();
+    } catch (err) {
+      console.error('Error al copiar texto formateado', err);
     }
   };
 
@@ -149,6 +162,7 @@ export const useTemplates = () => {
     copiedId,
     loading,
     handleCopy,
+    handleCopyFormatted,
     handleDelete,
     handleCreate,
     handleUpdate,

@@ -5,8 +5,10 @@ import { FilterSelect } from './components/ui/FilterSelect';
 import { TemplateGrid } from './components/templates/TemplateGrid';
 import { NewTemplateModal } from './components/templates/NewTemplateModal';
 import { ManageCategoriesModal } from './components/ui/ManageCategoriesModal';
+import { FillVariablesModal } from './components/templates/FillVariablesModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { useTemplates } from './hooks/useTemplates';
+import { extractVariables } from './utils/templateUtils';
 import { session } from './utils/session';
 import type { User, TemplateResponse, TemplateRequest } from './types';
 
@@ -16,6 +18,10 @@ export default function App() {
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateResponse | null>(null);
+
+  // Estados para el Modal de Variables Dinámicas
+  const [variableTemplate, setVariableTemplate] = useState<TemplateResponse | null>(null);
+  const [detectedVariables, setDetectedVariables] = useState<string[]>([]);
 
   const {
     templates,
@@ -30,6 +36,7 @@ export default function App() {
     copiedId,
     loading,
     handleCopy,
+    handleCopyFormatted,
     handleDelete,
     handleCreate,
     handleUpdate,
@@ -41,7 +48,7 @@ export default function App() {
     const user = session.getUser();
     setCurrentUser(user);
     setIsAuthModalOpen(false);
-    refreshTemplates(); 
+    refreshTemplates();
   };
 
   const handleLogout = () => {
@@ -70,9 +77,21 @@ export default function App() {
     setEditingTemplate(null);
   };
 
+  // Interceptor del botón de copiar
+  const handleCopyClick = (template: TemplateResponse) => {
+    const vars = extractVariables(template.content);
+    if (vars.length > 0) {
+      // Tiene variables -> Abrir modal
+      setVariableTemplate(template);
+      setDetectedVariables(vars);
+    } else {
+      // No tiene variables -> Copia directa
+      handleCopy(template);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
-      {/* Encabezado */}
       <Header
         currentUser={currentUser}
         onOpenModal={handleOpenCreateModal}
@@ -81,10 +100,7 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Contenido Principal */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
-        
-        {/* Barra de Filtros y Búsqueda */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
           <div className="md:col-span-6">
             <SearchBar
@@ -115,7 +131,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Grid de Plantillas */}
         {loading ? (
           <div className="text-center py-12 text-slate-400 font-medium">
             Cargando plantillas...
@@ -124,14 +139,13 @@ export default function App() {
           <TemplateGrid
             templates={templates}
             copiedId={copiedId}
-            onCopy={handleCopy}
+            onCopy={handleCopyClick}
             onDelete={handleDelete}
             onEdit={handleOpenEditModal}
           />
         )}
       </main>
 
-      {/* Modal Crear / Editar Plantilla */}
       <NewTemplateModal
         key={editingTemplate ? `edit-${editingTemplate.id}` : 'new-template'}
         isOpen={isTemplateModalOpen}
@@ -145,14 +159,25 @@ export default function App() {
         onSubmit={handleSubmitTemplate}
       />
 
-      {/* Modal Marcas y Categorías */}
       <ManageCategoriesModal
         isOpen={isCategoriesModalOpen}
         onClose={() => setIsCategoriesModalOpen(false)}
         onRefresh={refreshTemplates}
       />
 
-      {/* Modal de Autenticación */}
+      {/* Modal de Relleno de Variables */}
+      <FillVariablesModal
+        isOpen={!!variableTemplate}
+        template={variableTemplate}
+        variables={detectedVariables}
+        onClose={() => setVariableTemplate(null)}
+        onCopyFormatted={(formattedText) => {
+          if (variableTemplate) {
+            handleCopyFormatted(variableTemplate.id, formattedText);
+          }
+        }}
+      />
+
       <AuthModal
         isOpen={isAuthModalOpen}
         onLoginSuccess={handleLoginSuccess}
