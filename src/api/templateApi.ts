@@ -44,4 +44,9 @@ export const templateApi = {
       params: { userId: activeUserId },
     });
   },
+
+  updateTemplate: async (id: number, template: TemplateRequest): Promise<TemplateResponse> => {
+    const { data } = await httpClient.put<TemplateResponse>(`/templates/${id}`, template);
+    return data;
+  },
 };

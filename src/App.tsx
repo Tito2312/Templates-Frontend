@@ -44,6 +44,8 @@ export default function App() {
   const handleLogout = () => {
     session.clearSession();
     setCurrentUser(null);
+    refreshTemplates(); 
+    setIsAuthModalOpen(true); 
   };
 
   return (

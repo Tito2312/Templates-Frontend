@@ -46,17 +46,25 @@ export const useTemplates = () => {
   }, []);
 
   // Búsqueda de plantillas
-  const fetchTemplates = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await templateApi.searchTemplates(query, selectedBrand, selectedCategory);
-      setTemplates(data);
-    } catch (err) {
-      console.error('Error al consultar plantillas', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [query, selectedBrand, selectedCategory]);
+  // Búsqueda de plantillas respetando el usuario de la sesión
+    const fetchTemplates = useCallback(async () => {
+      const activeUserId = session.getUserId();
+      if (!localStorage.getItem('userId')) {
+        setTemplates([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const data = await templateApi.searchTemplates(query, selectedBrand, selectedCategory);
+        // Opcional: filtrar por el usuario activo si las plantillas son privadas por usuario
+        setTemplates(data);
+      } catch (err) {
+        console.error('Error al consultar plantillas', err);
+      } finally {
+        setLoading(false);
+      }
+    }, [query, selectedBrand, selectedCategory]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -113,6 +121,20 @@ export const useTemplates = () => {
     }
   };
 
+  const handleUpdate = async (id: number, payload: Omit<TemplateRequest, 'userId'>) => {
+    try {
+      const activeUserId = session.getUserId();
+      await templateApi.updateTemplate(id, {
+        ...payload,
+        userId: activeUserId,
+      });
+      await fetchTemplates();
+    } catch (err) {
+      console.error('Error al actualizar la plantilla', err);
+      throw err;
+    }
+  };
+
   return {
     templates,
     brands,
@@ -128,6 +150,7 @@ export const useTemplates = () => {
     handleCopy,
     handleDelete,
     handleCreate,
+    handleUpdate,
     refreshTemplates: fetchTemplates,
   };
 };
