@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, X } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 interface SearchBarProps {
   value: string;
@@ -10,26 +10,20 @@ interface SearchBarProps {
 export const SearchBar: React.FC<SearchBarProps> = ({
   value,
   onChange,
-  placeholder = 'Buscar por título o contenido...',
+  placeholder = 'Buscar...',
 }) => {
   return (
     <div className="relative w-full">
-      <Search className="absolute left-3.5 top-3.5 w-5 h-5 text-slate-400" />
+      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+        <Search className="w-4 h-4" />
+      </div>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-11 pr-10 py-3 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-100 placeholder-slate-400 text-sm shadow-inner transition"
+        className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition shadow-inner"
       />
-      {value && (
-        <button
-          onClick={() => onChange('')}
-          className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-200 transition"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      )}
     </div>
   );
 };

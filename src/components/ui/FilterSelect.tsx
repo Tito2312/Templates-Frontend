@@ -1,4 +1,5 @@
 import React from 'react';
+import { Filter } from 'lucide-react';
 
 interface Option {
   id: number;
@@ -6,7 +7,7 @@ interface Option {
 }
 
 interface FilterSelectProps {
-  label?: string;
+  label: string;
   value: string;
   options: Option[];
   onChange: (value: string) => void;
@@ -21,21 +22,19 @@ export const FilterSelect: React.FC<FilterSelectProps> = ({
   defaultText,
 }) => {
   return (
-    <div className="w-full">
-      {label && (
-        <label className="block text-xs font-medium text-slate-400 mb-1">
-          {label}
-        </label>
-      )}
+    <div className="flex flex-col gap-1 w-full">
+      <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+        <Filter className="w-3 h-3 text-indigo-400" /> {label}
+      </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full py-3 px-3 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-300 text-sm cursor-pointer transition"
+        className="w-full px-3 py-2 bg-slate-800 border border-slate-700/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition cursor-pointer"
       >
         <option value="">{defaultText}</option>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.name}
+        {options.map((opt) => (
+          <option key={opt.id} value={opt.id.toString()}>
+            {opt.name}
           </option>
         ))}
       </select>
