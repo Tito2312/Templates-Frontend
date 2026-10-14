@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
+import { X } from 'lucide-react';
 import { userApi } from '../../api/userApi';
 import { session } from '../../utils/session';
 
 interface AuthModalProps {
   isOpen: boolean;
   onLoginSuccess: () => void;
+  onClose?: () => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onLoginSuccess }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({
+  isOpen,
+  onLoginSuccess,
+  onClose,
+}) => {
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -45,9 +51,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onLoginSuccess }) 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-        <h2 className="text-xl font-bold text-center text-slate-100">
+    /* Fondo oscuro: al hacer clic por fuera se invoca onClose */
+    <div
+      onClick={onClose}
+      className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 cursor-pointer"
+    >
+      {/* Contenedor principal del modal: e.stopPropagation() evita cierres involuntarios al interactuar con el formulario */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 cursor-default relative"
+      >
+        {/* Botón de Cierre X (si onClose está presente) */}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-700 transition cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+
+        <h2 className="text-xl font-bold text-center text-slate-100 pr-6">
           {isRegister ? 'Crear Cuenta' : 'Iniciar Sesión'}
         </h2>
 
@@ -58,7 +83,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onLoginSuccess }) 
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Campo Nombre de Usuario (Solo en Registro) */}
+          {/* Campo Usuario (solo en Registro) */}
           {isRegister && (
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1">
@@ -75,7 +100,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onLoginSuccess }) 
             </div>
           )}
 
-          {/* Campo Correo Electrónico (Requerido tanto en Login como en Registro) */}
+          {/* Campo Correo Electrónico */}
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1">
               Correo Electrónico

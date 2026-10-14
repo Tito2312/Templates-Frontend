@@ -156,6 +156,7 @@ export default function App() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onLoginSuccess={handleLoginSuccess}
+        onClose={() => setIsAuthModalOpen(false)}
       />
     </div>
   );
