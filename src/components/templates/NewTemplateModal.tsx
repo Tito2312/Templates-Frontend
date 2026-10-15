@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, UploadCloud, Loader2, Image as ImageIcon } from 'lucide-react';
 import type { Brand, Category, TemplateRequest, TemplateResponse } from '../../types';
+import { session } from '../../utils/session';
 
 interface NewTemplateModalProps {
   isOpen: boolean;
   brands: Brand[];
   categories: Category[];
-  templateToEdit?: TemplateResponse | null;
+  templateToEdit: TemplateResponse | null;
   onClose: () => void;
-  onSubmit: (data: Omit<TemplateRequest, 'userId'>) => Promise<void>;
+  onSubmit: (data: TemplateRequest) => Promise<void>;
 }
 
 export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
@@ -19,160 +20,229 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  // Inicialización directa del estado a partir de templateToEdit (sin useEffect)
-  const [title, setTitle] = useState(templateToEdit?.title || '');
-  const [content, setContent] = useState(templateToEdit?.content || '');
-  const [brandId, setBrandId] = useState<string>(
-    templateToEdit?.brandId ? templateToEdit.brandId.toString() : ''
-  );
-  const [categoryId, setCategoryId] = useState<string>(
-    templateToEdit?.categoryId ? templateToEdit.categoryId.toString() : ''
-  );
-  const [imageUrl, setImageUrl] = useState(templateToEdit?.imageUrl || '');
-  const [loading, setLoading] = useState(false);
+  // Inicializamos el estado 1 sola vez leyendo las props directamente al montar
+  const [formData, setFormData] = useState<TemplateRequest>(() => ({
+    title: templateToEdit?.title || '',
+    content: templateToEdit?.content || '',
+    brandId: templateToEdit?.brandId || undefined,
+    categoryId: templateToEdit?.categoryId || undefined,
+    imageUrl: templateToEdit?.imageUrl || '',
+  }));
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const resetForm = () => {
+    setFormData({ title: '', content: '', brandId: undefined, categoryId: undefined, imageUrl: '' });
+  };
+
+  const handleCloseModal = () => {
+    resetForm();
+    onClose();
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecciona un archivo de imagen válido (JPG, PNG, GIF, etc.).');
+      return;
+    }
+
+    setIsUploading(true);
     try {
-      await onSubmit({
-        title,
-        content,
-        brandId: brandId ? Number(brandId) : null,
-        categoryId: categoryId ? Number(categoryId) : null,
-        imageUrl: imageUrl.trim() || undefined,
+      const data = new FormData();
+      data.append('file', file);
+
+      const token = session.getToken();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
+      const response = await fetch(`${apiUrl}/api/images/upload`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: data,
       });
-      onClose();
-    } catch (err) {
-      console.error('Error al guardar la plantilla:', err);
+
+      if (!response.ok) throw new Error('Error al subir la imagen');
+
+      const result = await response.json();
+      setFormData(prev => ({ ...prev, imageUrl: result.url }));
+      
+    } catch (error) {
+      console.error('Error subiendo imagen:', error);
+      alert('Ocurrió un error al subir la imagen. Inténtalo de nuevo.');
     } finally {
-      setLoading(false);
+      setIsUploading(false);
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    await onSubmit(formData);
+    setIsSubmitting(false);
+    resetForm();
+  };
+
   return (
-    <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 cursor-pointer"
-    >
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 cursor-default">
-        {/* Encabezado */}
-        <div className="flex justify-between items-center border-b border-slate-700 pb-3">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        
+        <div className="flex justify-between items-center p-6 border-b border-slate-700">
           <h2 className="text-xl font-bold text-slate-100">
             {templateToEdit ? 'Editar Plantilla' : 'Nueva Plantilla'}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-700 transition"
-          >
+          <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-200 transition">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Título */}
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">
-              Título de la Plantilla
-            </label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ej. Saludo Inicial WhatsApp"
-              className="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-sm font-medium text-slate-300">Título de la plantilla</label>
+              <input
+                type="text"
+                required
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition outline-none"
+                placeholder="Ej. Bienvenida a Casino..."
+              />
+            </div>
 
-          {/* Marca y Categoría */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">
-                Marca
-              </label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-300">Marca (Opcional)</label>
               <select
-                value={brandId}
-                onChange={(e) => setBrandId(e.target.value)}
-                className="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-indigo-500 cursor-pointer"
+                value={formData.brandId || ''}
+                onChange={(e) => setFormData({ ...formData, brandId: e.target.value ? Number(e.target.value) : undefined })}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:ring-2 focus:ring-indigo-500 transition outline-none"
               >
-                <option value="">Sin Marca</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
+                <option value="">Ninguna</option>
+                {brands.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">
-                Categoría
-              </label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-300">Categoría (Opcional)</label>
               <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-indigo-500 cursor-pointer"
+                value={formData.categoryId || ''}
+                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value ? Number(e.target.value) : undefined })}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:ring-2 focus:ring-indigo-500 transition outline-none"
               >
-                <option value="">Sin Categoría</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
+                <option value="">Ninguna</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* URL de Imagen */}
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">
-              URL de Imagen / Banner (Opcional)
+          {/* --- ZONA DRAG & DROP --- */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-300 flex items-center gap-1.5">
+              <ImageIcon className="w-4 h-4 text-indigo-400" />
+              Imagen Adjunta (Opcional)
             </label>
-            <input
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://ejemplo.com/imagen.png"
-              className="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
-            />
+            
+            {formData.imageUrl ? (
+              <div className="relative rounded-xl overflow-hidden border border-slate-700 bg-slate-900/50 flex items-center justify-center h-48 group">
+                <img src={formData.imageUrl} alt="Preview" className="h-full w-full object-contain" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium shadow-lg transition flex items-center gap-2 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" /> Eliminar Imagen
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleFileUpload(file);
+                }}
+                onClick={() => !isUploading && fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all h-48 ${
+                  isDragging 
+                    ? 'border-indigo-400 bg-indigo-500/10' 
+                    : 'border-slate-700 hover:border-slate-500 bg-slate-900/50 cursor-pointer'
+                }`}
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                  }}
+                  accept="image/*"
+                  className="hidden"
+                />
+                
+                {isUploading ? (
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="w-10 h-10 text-indigo-400 animate-spin mb-3" />
+                    <p className="text-sm font-medium text-slate-300">Subiendo a Cloudinary...</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <div className={`p-3 rounded-full mb-3 transition-colors ${isDragging ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-400'}`}>
+                      <UploadCloud className="w-8 h-8" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-200">
+                      Haz clic para explorar o arrastra una imagen aquí
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">Soporta JPG, PNG, WEBP, GIF</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Contenido */}
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">
-              Contenido de la Plantilla
-            </label>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-300">Contenido (Usa [variable] para dinámicos)</label>
             <textarea
               required
-              rows={5}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Escribe el texto de la respuesta..."
-              className="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-indigo-500 font-mono"
+              rows={6}
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 font-mono text-sm focus:ring-2 focus:ring-indigo-500 transition outline-none resize-none"
+              placeholder={"Hola [nombre],\n\nTe informamos que tu retiro por [monto] ha sido procesado."}
             />
           </div>
 
-          {/* Botones de Acción */}
-          <div className="flex justify-end space-x-3 pt-2">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-medium transition"
+              onClick={handleCloseModal}
+              disabled={isSubmitting || isUploading}
+              className="px-5 py-2.5 text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-lg transition disabled:opacity-50 cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-medium transition disabled:opacity-50"
+              disabled={isSubmitting || isUploading}
+              className="px-5 py-2.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg transition flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
-              {loading ? 'Guardando...' : templateToEdit ? 'Actualizar Plantilla' : 'Guardar Plantilla'}
+              {isSubmitting ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>
+              ) : (
+                templateToEdit ? 'Actualizar Plantilla' : 'Crear Plantilla'
+              )}
             </button>
           </div>
         </form>

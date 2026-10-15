@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Header } from './components/layout/Header';
 import { SearchBar } from './components/ui/SearchBar';
 import { FilterSelect } from './components/ui/FilterSelect';
@@ -27,9 +27,8 @@ export default function App() {
   const [deletingTemplateId, setDeletingTemplateId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Estados para el Modal de Variables Dinámicas
+  // Estado para el Modal de Variables Dinámicas
   const [variableTemplate, setVariableTemplate] = useState<TemplateResponse | null>(null);
-  const [detectedVariables, setDetectedVariables] = useState<string[]>([]);
 
   // Hook de Notificaciones Flotantes
   const { toasts, showToast, removeToast } = useToast();
@@ -118,7 +117,6 @@ export default function App() {
     const vars = extractVariables(template.content);
     if (vars.length > 0) {
       setVariableTemplate(template);
-      setDetectedVariables(vars);
     } else {
       await handleCopy(template);
       showToast('¡Texto copiado al portapapeles!', 'success');
@@ -142,7 +140,7 @@ export default function App() {
         style={{ backgroundColor: themeColor }} 
       />
 
-      {/* 2. Atmósfera Masiva de Fondo (Degradado Radial Envolvente) */}
+      {/* 2. Atmósfera Masiva de Fondo */}
       <div
         className="pointer-events-none fixed inset-0 opacity-25 transition-all duration-700 ease-in-out z-0"
         style={{
@@ -160,7 +158,7 @@ export default function App() {
           onOpenCategoriesModal={() => setIsCategoriesModalOpen(true)}
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
           onLogout={handleLogout}
-          themeColor={themeColor} // Pass color to header
+          themeColor={themeColor}
         />
 
         <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
@@ -240,16 +238,17 @@ export default function App() {
       />
 
       <FillVariablesModal
-        isOpen={!!variableTemplate}
+        isOpen={variableTemplate !== null}
         template={variableTemplate}
-        variables={detectedVariables}
         onClose={() => setVariableTemplate(null)}
-        onCopyFormatted={async (formattedText) => {
+        onCopyFilledText={async (formattedText: string) => {
           if (variableTemplate) {
             await handleCopyFormatted(variableTemplate.id, formattedText);
             showToast('¡Texto formateado copiado!', 'success');
+            setVariableTemplate(null);
           }
         }}
+        themeColor={themeColor}
       />
 
       <ConfirmModal
