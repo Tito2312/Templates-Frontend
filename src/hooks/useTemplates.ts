@@ -19,7 +19,7 @@ export const useTemplates = () => {
 
   // Cargar metadatos (Marcas y Categorías) para eventos manuales
   const fetchMetadata = useCallback(async () => {
-    if (!session.getUserId()) return;
+    if (!session.getUser()) return;
     try {
       const [brandsData, categoriesData] = await Promise.all([
         brandApi.getBrands(),
@@ -34,7 +34,7 @@ export const useTemplates = () => {
 
   // Cargar plantillas para eventos manuales (crear, editar, eliminar)
   const fetchTemplates = useCallback(async () => {
-    if (!session.getUserId()) return;
+    if (!session.getUser()) return;
     setLoading(true);
     try {
       const data = await templateApi.searchTemplates(query, selectedBrand, selectedCategory);
@@ -61,12 +61,12 @@ export const useTemplates = () => {
     setQuery('');
   }, []);
 
-  // Efecto único de sincronización con la API (evita renders en cascada)
+  // Efecto único de sincronización con la API
   useEffect(() => {
     let isActive = true;
-    const userId = session.getUserId();
+    const user = session.getUser();
 
-    if (!userId) {
+    if (!user) {
       return;
     }
 
@@ -135,17 +135,15 @@ export const useTemplates = () => {
     }
   };
 
-  const handleCreate = async (payload: Omit<TemplateRequest, 'userId'>) => {
-    const activeUserId = session.getUserId();
-    if (!activeUserId) return;
-    await templateApi.createTemplate({ ...payload, userId: activeUserId });
+  const handleCreate = async (payload: TemplateRequest) => {
+    if (!session.getUser()) return;
+    await templateApi.createTemplate(payload);
     await fetchTemplates();
   };
 
-  const handleUpdate = async (id: number, payload: Omit<TemplateRequest, 'userId'>) => {
-    const activeUserId = session.getUserId();
-    if (!activeUserId) return;
-    await templateApi.updateTemplate(id, { ...payload, userId: activeUserId });
+  const handleUpdate = async (id: number, payload: TemplateRequest) => {
+    if (!session.getUser()) return;
+    await templateApi.updateTemplate(id, payload);
     await fetchTemplates();
   };
 

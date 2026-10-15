@@ -9,10 +9,16 @@ export const userApi = {
       email,
       password: rawPassword,
     });
+
+    if (!data || !data.user) {
+      throw new Error('El servidor no retornó los datos del usuario.');
+    }
+
     if (data.token) {
       session.setToken(data.token);
     }
     session.setUser(data.user);
+
     return data.user;
   },
 
@@ -21,10 +27,16 @@ export const userApi = {
       email,
       password: rawPassword,
     });
+
+    if (!data || !data.user) {
+      throw new Error('Credenciales o respuesta inválida del servidor.');
+    }
+
     if (data.token) {
       session.setToken(data.token);
     }
     session.setUser(data.user);
+
     return data.user;
   },
 
