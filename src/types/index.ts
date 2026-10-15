@@ -50,3 +50,9 @@ export interface PaginatedResponse<T> {
   totalPages: number;
   isLast: boolean;
 }
+
+export interface Brand {
+  id: number;
+  name: string;
+  colorHex?: string;
+}

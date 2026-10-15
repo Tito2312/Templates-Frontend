@@ -7,8 +7,8 @@ export const brandApi = {
     return data;
   },
 
-  createBrand: async (name: string): Promise<Brand> => {
-    const { data } = await httpClient.post<Brand>('/brands', { name });
+  createBrand: async (name: string, colorHex?: string): Promise<Brand> => {
+    const { data } = await httpClient.post<Brand>('/brands', { name, colorHex });
     return data;
   },
 

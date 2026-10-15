@@ -100,7 +100,6 @@ export default function App() {
     }
   };
 
-  // Confirmación y ejecución de borrado
   const handleConfirmDelete = async () => {
     if (!deletingTemplateId) return;
     setIsDeleting(true);
@@ -115,90 +114,112 @@ export default function App() {
     }
   };
 
-  // Interceptor del botón de copiar
   const handleCopyClick = async (template: TemplateResponse) => {
     const vars = extractVariables(template.content);
     if (vars.length > 0) {
-      // Tiene variables -> Abrir modal
       setVariableTemplate(template);
       setDetectedVariables(vars);
     } else {
-      // No tiene variables -> Copia directa
       await handleCopy(template);
       showToast('¡Texto copiado al portapapeles!', 'success');
     }
   };
 
+  // COLOR DE LA MARCA O COLOR DEFAULT (Índigo #6366f1)
+  const activeBrandObject = brands.find(
+    (b) => b.name.toLowerCase() === selectedBrand?.toLowerCase()
+  );
+  const themeColor = activeBrandObject?.colorHex || '#6366f1';
+
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans relative">
+    <div 
+      className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans relative transition-colors duration-500 overflow-x-hidden"
+      style={{ '--theme-color': themeColor } as React.CSSProperties}
+    >
+      {/* 1. Línea Superior de Marca */}
+      <div 
+        className="h-1.5 w-full transition-all duration-500 z-50 shrink-0" 
+        style={{ backgroundColor: themeColor }} 
+      />
+
+      {/* 2. Atmósfera Masiva de Fondo (Degradado Radial Envolvente) */}
+      <div
+        className="pointer-events-none fixed inset-0 opacity-25 transition-all duration-700 ease-in-out z-0"
+        style={{
+          background: `radial-gradient(circle at 50% 15%, ${themeColor} 0%, transparent 65%)`
+        }}
+      />
+
       {/* Sistema Global de Notificaciones Toast */}
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
-      <Header
-        currentUser={currentUser}
-        onOpenModal={handleOpenCreateModal}
-        onOpenCategoriesModal={() => setIsCategoriesModalOpen(true)}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        onLogout={handleLogout}
-      />
+      <div className="relative z-10 flex flex-col flex-1">
+        <Header
+          currentUser={currentUser}
+          onOpenModal={handleOpenCreateModal}
+          onOpenCategoriesModal={() => setIsCategoriesModalOpen(true)}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onLogout={handleLogout}
+          themeColor={themeColor} // Pass color to header
+        />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
-        {/* Controles de Búsqueda y Filtros */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-          <div className="md:col-span-6">
-            <SearchBar
-              value={query}
-              onChange={setQuery}
-              placeholder="Escribe para buscar por título o contenido..."
-            />
+        <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="md:col-span-6">
+              <SearchBar
+                value={query}
+                onChange={setQuery}
+                placeholder="Escribe para buscar por título o contenido..."
+              />
+            </div>
+
+            <div className="md:col-span-3">
+              <FilterSelect
+                label="Marca"
+                value={selectedBrand}
+                options={brands}
+                onChange={setSelectedBrand}
+                defaultText="Todas las Marcas"
+              />
+            </div>
+
+            <div className="md:col-span-3">
+              <FilterSelect
+                label="Categoría"
+                value={selectedCategory}
+                options={categories}
+                onChange={setSelectedCategory}
+                defaultText="Todas las Categorías"
+              />
+            </div>
           </div>
 
-          <div className="md:col-span-3">
-            <FilterSelect
-              label="Marca"
-              value={selectedBrand}
-              options={brands}
-              onChange={setSelectedBrand}
-              defaultText="Todas las Marcas"
-            />
-          </div>
+          {loading ? (
+            <div className="text-center py-12 text-slate-400 font-medium">
+              Cargando plantillas...
+            </div>
+          ) : (
+            <>
+              <TemplateGrid
+                templates={templates}
+                copiedId={copiedId}
+                onCopy={handleCopyClick}
+                onDelete={(id) => setDeletingTemplateId(id)}
+                onEdit={handleOpenEditModal}
+                themeColor={themeColor}
+              />
 
-          <div className="md:col-span-3">
-            <FilterSelect
-              label="Categoría"
-              value={selectedCategory}
-              options={categories}
-              onChange={setSelectedCategory}
-              defaultText="Todas las Categorías"
-            />
-          </div>
-        </div>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
+            </>
+          )}
+        </main>
+      </div>
 
-        {loading ? (
-          <div className="text-center py-12 text-slate-400 font-medium">
-            Cargando plantillas...
-          </div>
-        ) : (
-          <>
-            <TemplateGrid
-              templates={templates}
-              copiedId={copiedId}
-              onCopy={handleCopyClick}
-              onDelete={(id) => setDeletingTemplateId(id)}
-              onEdit={handleOpenEditModal}
-            />
-
-            {/* Controles de Paginación */}
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              onPageChange={setPage}
-            />
-          </>
-        )}
-      </main>
-
-      {/* Modal para Crear / Editar Plantilla */}
+      {/* Modales */}
       <NewTemplateModal
         key={editingTemplate ? `edit-${editingTemplate.id}` : 'new-template'}
         isOpen={isTemplateModalOpen}
@@ -212,14 +233,12 @@ export default function App() {
         onSubmit={handleSubmitTemplate}
       />
 
-      {/* Modal de Gestión de Categorías y Marcas */}
       <ManageCategoriesModal
         isOpen={isCategoriesModalOpen}
         onClose={() => setIsCategoriesModalOpen(false)}
         onRefresh={refreshTemplates}
       />
 
-      {/* Modal de Relleno de Variables */}
       <FillVariablesModal
         isOpen={!!variableTemplate}
         template={variableTemplate}
@@ -233,7 +252,6 @@ export default function App() {
         }}
       />
 
-      {/* Modal de Confirmación de Eliminación */}
       <ConfirmModal
         isOpen={deletingTemplateId !== null}
         title="¿Eliminar plantilla?"
@@ -243,7 +261,6 @@ export default function App() {
         onCancel={() => setDeletingTemplateId(null)}
       />
 
-      {/* Modal de Autenticación */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onLoginSuccess={handleLoginSuccess}

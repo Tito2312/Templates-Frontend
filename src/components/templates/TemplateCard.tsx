@@ -8,6 +8,7 @@ interface TemplateCardProps {
   onCopy: (template: TemplateResponse) => void;
   onDelete: (id: number) => void;
   onEdit?: (template: TemplateResponse) => void;
+  themeColor?: string; // 1. Nueva prop para el color dinámico
 }
 
 export const TemplateCard: React.FC<TemplateCardProps> = ({
@@ -16,13 +17,16 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
   onCopy,
   onDelete,
   onEdit,
+  themeColor, // 2. Se recibe aquí la prop
 }) => {
+  const activeColor = themeColor || '#6366f1';
+
   return (
-    <div className="bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 hover:border-indigo-500/50 rounded-2xl p-5 shadow-lg hover:shadow-indigo-500/10 transition-all duration-200 flex flex-col justify-between group">
+    <div className="bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 rounded-2xl p-5 shadow-lg transition-all duration-200 flex flex-col justify-between group">
       <div>
-        {/* Encabezado: Título bien visible y botones de acción */}
+        {/* Encabezado: Título y acciones */}
         <div className="flex justify-between items-start gap-3 mb-3 border-b border-slate-700/50 pb-2">
-          <h3 className="font-bold text-slate-100 text-base leading-snug tracking-wide group-hover:text-indigo-300 transition">
+          <h3 className="font-bold text-slate-100 text-base leading-snug tracking-wide group-hover:text-slate-200 transition">
             {template.title}
           </h3>
           <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition">
@@ -30,7 +34,7 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
               <button
                 onClick={() => onEdit(template)}
                 title="Editar plantilla"
-                className="text-slate-400 hover:text-indigo-400 p-1.5 rounded-lg hover:bg-indigo-500/10 transition"
+                className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-700/50 transition"
               >
                 <Pencil className="w-4 h-4" />
               </button>
@@ -48,7 +52,14 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
         {/* Badges de Marca y Categoría */}
         <div className="flex flex-wrap gap-2 mb-3">
           {template.brandName && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+            <span 
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium border"
+              style={{
+                backgroundColor: `${activeColor}15`,
+                borderColor: `${activeColor}40`,
+                color: activeColor,
+              }}
+            >
               <Briefcase className="w-3 h-3" />
               {template.brandName}
             </span>
@@ -81,7 +92,7 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
         </div>
       </div>
 
-      {/* Pie de Tarjeta: Contador y Botón de Copiar */}
+      {/* Pie de Tarjeta */}
       <div className="flex items-center justify-between pt-2 border-t border-slate-700/60">
         <span className="text-[11px] font-medium text-slate-400 flex items-center gap-1">
           <Eye className="w-3.5 h-3.5 text-slate-500" />
@@ -90,23 +101,11 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
 
         <button
           onClick={() => onCopy(template)}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md active:scale-95 ${
-            isCopied
-              ? 'bg-emerald-600 text-white ring-2 ring-emerald-400/50'
-              : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-          }`}
+          style={{ backgroundColor: activeColor }}
+          className="px-3 py-1.5 text-white rounded-xl text-xs font-medium hover:brightness-110 transition flex items-center gap-1.5 shadow-md cursor-pointer"
         >
-          {isCopied ? (
-            <>
-              <Check className="w-3.5 h-3.5" />
-              <span>¡Copiado!</span>
-            </>
-          ) : (
-            <>
-              <Copy className="w-3.5 h-3.5" />
-              <span>Copiar</span>
-            </>
-          )}
+          {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          {isCopied ? '¡Copiado!' : 'Copiar'}
         </button>
       </div>
     </div>

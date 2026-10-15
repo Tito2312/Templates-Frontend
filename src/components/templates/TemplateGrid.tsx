@@ -9,6 +9,7 @@ interface TemplateGridProps {
   onCopy: (template: TemplateResponse) => void;
   onDelete: (id: number) => void;
   onEdit?: (template: TemplateResponse) => void;
+  themeColor?: string;
 }
 
 export const TemplateGrid: React.FC<TemplateGridProps> = ({
@@ -17,6 +18,7 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({
   onCopy,
   onDelete,
   onEdit,
+  themeColor
 }) => {
   if (templates.length === 0) {
     return (
@@ -44,6 +46,7 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({
           onCopy={onCopy}
           onDelete={onDelete}
           onEdit={onEdit}
+          themeColor={themeColor}
         />
       ))}
     </div>

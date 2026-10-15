@@ -8,6 +8,7 @@ interface HeaderProps {
   onOpenCategoriesModal: () => void;
   onOpenAuthModal: () => void;
   onLogout: () => void;
+  themeColor?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,11 +17,17 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCategoriesModal,
   onOpenAuthModal,
   onLogout,
+  themeColor,
 }) => {
+  const activeColor = themeColor || '#6366f1';
+
   return (
     <header className="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-10 shadow-lg">
       <div className="flex items-center space-x-3">
-        <div className="bg-indigo-600 p-2 rounded-lg">
+        <div 
+          style={{ backgroundColor: activeColor }} 
+          className="p-2 rounded-lg transition-colors duration-300"
+        >
           <Bookmark className="w-6 h-6 text-white" />
         </div>
         <div>
@@ -33,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
         {currentUser ? (
           <>
             <div className="flex items-center space-x-2 px-3 py-1.5 bg-slate-900/60 border border-slate-700 rounded-lg text-xs text-slate-300">
-              <UserIcon className="w-3.5 h-3.5 text-indigo-400" />
+              <UserIcon className="w-3.5 h-3.5" style={{ color: activeColor }} />
               <span className="font-medium text-slate-200">{currentUser.username}</span>
             </div>
 
@@ -47,7 +54,8 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button
               onClick={onOpenModal}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg flex items-center space-x-1.5 transition text-xs font-medium"
+              style={{ backgroundColor: activeColor }}
+              className="text-white px-3.5 py-2 rounded-lg flex items-center space-x-1.5 transition text-xs font-medium hover:brightness-110 shadow-md"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Nueva Plantilla</span>
@@ -64,7 +72,8 @@ export const Header: React.FC<HeaderProps> = ({
         ) : (
           <button
             onClick={onOpenAuthModal}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition text-xs font-medium"
+            style={{ backgroundColor: activeColor }}
+            className="text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition text-xs font-medium hover:brightness-110 shadow-md"
           >
             <LogIn className="w-4 h-4" />
             <span>Iniciar Sesión / Registro</span>

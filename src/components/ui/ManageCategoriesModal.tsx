@@ -18,11 +18,11 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
   const [brands, setBrands] = useState<Brand[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brandName, setBrandName] = useState('');
+  const [brandColor, setBrandColor] = useState('#6366f1');
   const [categoryName, setCategoryName] = useState('');
   const [loadingBrand, setLoadingBrand] = useState(false);
   const [loadingCategory, setLoadingCategory] = useState(false);
 
-  // Cargar datos únicamente si el modal está abierto
   useEffect(() => {
     let isMounted = true;
 
@@ -71,8 +71,9 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
     if (!brandName.trim()) return;
     setLoadingBrand(true);
     try {
-      await brandApi.createBrand(brandName.trim());
+      await brandApi.createBrand(brandName.trim(), brandColor);
       setBrandName('');
+      setBrandColor('#6366f1'); // Restablecer al color base
       await reloadData();
       onRefresh();
     } catch (err) {
@@ -99,12 +100,10 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
   };
 
   return (
-    /* Fondo oscuro: al hacer clic aquí se llama a onClose */
     <div
       onClick={onClose}
       className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 cursor-pointer"
     >
-      {/* Cajas internas: e.stopPropagation() evita que el clic dentro cierre el modal */}
       <div
         onClick={(e) => e.stopPropagation()}
         className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-6 cursor-default"
@@ -132,7 +131,7 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
             <h3 className="text-sm font-semibold text-indigo-400 flex items-center gap-1.5 uppercase tracking-wider">
               <Briefcase className="w-4 h-4" /> Marcas
             </h3>
-            <form onSubmit={handleCreateBrand} className="flex gap-2">
+            <form onSubmit={handleCreateBrand} className="flex gap-2 items-center">
               <input
                 type="text"
                 value={brandName}
@@ -140,6 +139,18 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                 placeholder="Nueva marca..."
                 className="flex-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
               />
+
+              {/* Selector de Color Hexadecimal */}
+              <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1">
+                <input
+                  type="color"
+                  value={brandColor}
+                  onChange={(e) => setBrandColor(e.target.value)}
+                  className="w-5 h-5 bg-transparent rounded cursor-pointer border-0"
+                  title="Seleccionar color de marca"
+                />
+              </div>
+
               <button
                 type="submit"
                 disabled={loadingBrand}
@@ -155,7 +166,16 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                   key={b.id}
                   className="flex justify-between items-center bg-slate-900/60 p-2 rounded-lg text-xs text-slate-300 border border-slate-700/50"
                 >
-                  <span>{b.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm shrink-0"
+                      style={{ backgroundColor: b.colorHex || '#6366f1' }}
+                    />
+                    <span>{b.name}</span>
+                  </div>
+                  {b.colorHex && (
+                    <span className="text-[10px] font-mono text-slate-500">{b.colorHex}</span>
+                  )}
                 </div>
               ))}
             </div>
