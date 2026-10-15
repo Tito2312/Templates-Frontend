@@ -33,7 +33,7 @@ export const FilterSelect: React.FC<FilterSelectProps> = ({
       >
         <option value="">{defaultText}</option>
         {options.map((opt) => (
-          <option key={opt.id} value={opt.id.toString()}>
+          <option key={opt.id} value={opt.name}>
             {opt.name}
           </option>
         ))}

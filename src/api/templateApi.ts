@@ -1,14 +1,16 @@
 import { httpClient } from './httpClient';
-import type { TemplateResponse, TemplateRequest } from '../types';
+import type { TemplateResponse, TemplateRequest, PaginatedResponse } from '../types';
 
 export const templateApi = {
   searchTemplates: async (
-    query?: string,
-    brandId?: string,
-    categoryId?: string
-  ): Promise<TemplateResponse[]> => {
-    const { data } = await httpClient.get<TemplateResponse[]>('/templates/search', {
-      params: { query, brandId, categoryId },
+    query: string = '',
+    brand: string = '',
+    category: string = '',
+    page: number = 0,
+    size: number = 9
+  ): Promise<PaginatedResponse<TemplateResponse>> => {
+    const { data } = await httpClient.get<PaginatedResponse<TemplateResponse>>('/templates', {
+      params: { query, brand, category, page, size },
     });
     return data;
   },

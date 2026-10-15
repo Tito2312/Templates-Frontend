@@ -9,6 +9,7 @@ import { FillVariablesModal } from './components/templates/FillVariablesModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { ConfirmModal } from './components/ui/ConfirmModal';
 import { ToastContainer } from './components/ui/Toast';
+import { Pagination } from './components/ui/Pagination';
 import { useTemplates } from './hooks/useTemplates';
 import { useToast } from './hooks/useToast';
 import { extractVariables } from './utils/templateUtils';
@@ -43,6 +44,9 @@ export default function App() {
     setSelectedBrand,
     selectedCategory,
     setSelectedCategory,
+    page,
+    setPage,
+    totalPages,
     copiedId,
     loading,
     handleCopy,
@@ -63,7 +67,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    session.clear(); // Corregido: se usa .clear() de session.ts
+    session.clear();
     setCurrentUser(null);
     clearData();
     setIsAuthModalOpen(true);
@@ -103,7 +107,7 @@ export default function App() {
     try {
       await handleDelete(deletingTemplateId);
       showToast('Plantilla eliminada correctamente', 'success');
-    } catch  {
+    } catch {
       showToast('Error al eliminar la plantilla', 'error');
     } finally {
       setIsDeleting(false);
@@ -139,6 +143,7 @@ export default function App() {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+        {/* Controles de Búsqueda y Filtros */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
           <div className="md:col-span-6">
             <SearchBar
@@ -174,13 +179,22 @@ export default function App() {
             Cargando plantillas...
           </div>
         ) : (
-          <TemplateGrid
-            templates={templates}
-            copiedId={copiedId}
-            onCopy={handleCopyClick}
-            onDelete={(id) => setDeletingTemplateId(id)}
-            onEdit={handleOpenEditModal}
-          />
+          <>
+            <TemplateGrid
+              templates={templates}
+              copiedId={copiedId}
+              onCopy={handleCopyClick}
+              onDelete={(id) => setDeletingTemplateId(id)}
+              onEdit={handleOpenEditModal}
+            />
+
+            {/* Controles de Paginación */}
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </>
         )}
       </main>
 

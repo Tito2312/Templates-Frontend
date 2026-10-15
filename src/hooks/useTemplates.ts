@@ -14,10 +14,15 @@ export const useTemplates = () => {
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
+  // Estados para Paginación
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Cargar metadatos (Marcas y Categorías) para eventos manuales
+  // Cargar metadatos (Marcas y Categorías)
   const fetchMetadata = useCallback(async () => {
     if (!session.getUser()) return;
     try {
@@ -32,21 +37,23 @@ export const useTemplates = () => {
     }
   }, []);
 
-  // Cargar plantillas para eventos manuales (crear, editar, eliminar)
+  // Cargar plantillas paginadas
   const fetchTemplates = useCallback(async () => {
     if (!session.getUser()) return;
     setLoading(true);
     try {
-      const data = await templateApi.searchTemplates(query, selectedBrand, selectedCategory);
-      setTemplates(data);
+      const data = await templateApi.searchTemplates(query, selectedBrand, selectedCategory, page, 9);
+      setTemplates(data.content);
+      setTotalPages(data.totalPages);
+      setTotalElements(data.totalElements);
     } catch (err) {
       console.error('Error al consultar plantillas', err);
     } finally {
       setLoading(false);
     }
-  }, [query, selectedBrand, selectedCategory]);
+  }, [query, selectedBrand, selectedCategory, page]);
 
-  // Refrescar metadatos y plantillas manualmente tras cambios
+  // Refrescar metadatos y plantillas tras un cambio
   const refreshAll = useCallback(async () => {
     await Promise.all([fetchMetadata(), fetchTemplates()]);
   }, [fetchMetadata, fetchTemplates]);
@@ -59,16 +66,32 @@ export const useTemplates = () => {
     setSelectedBrand('');
     setSelectedCategory('');
     setQuery('');
+    setPage(0);
+    setTotalPages(0);
+    setTotalElements(0);
   }, []);
+
+  const handleSetQuery = (val: string) => {
+    setQuery(val);
+    setPage(0);
+  };
+
+  const handleSetBrand = (val: string) => {
+    setSelectedBrand(val);
+    setPage(0);
+  };
+
+  const handleSetCategory = (val: string) => {
+    setSelectedCategory(val);
+    setPage(0);
+  };
 
   // Efecto único de sincronización con la API
   useEffect(() => {
     let isActive = true;
     const user = session.getUser();
 
-    if (!user) {
-      return;
-    }
+    if (!user) return;
 
     const loadData = async () => {
       setLoading(true);
@@ -76,13 +99,15 @@ export const useTemplates = () => {
         const [brandsData, categoriesData, templatesData] = await Promise.all([
           brandApi.getBrands(),
           categoryApi.getCategories(),
-          templateApi.searchTemplates(query, selectedBrand, selectedCategory),
+          templateApi.searchTemplates(query, selectedBrand, selectedCategory, page, 9),
         ]);
 
         if (isActive) {
           setBrands(brandsData);
           setCategories(categoriesData);
-          setTemplates(templatesData);
+          setTemplates(templatesData.content);
+          setTotalPages(templatesData.totalPages);
+          setTotalElements(templatesData.totalElements);
         }
       } catch (err) {
         console.error('Error al consultar datos', err);
@@ -98,9 +123,9 @@ export const useTemplates = () => {
     return () => {
       isActive = false;
     };
-  }, [query, selectedBrand, selectedCategory]);
+  }, [query, selectedBrand, selectedCategory, page]);
 
-  // Copia de texto directo
+  // Acciones
   const handleCopy = async (template: TemplateResponse) => {
     try {
       await navigator.clipboard.writeText(template.content);
@@ -113,7 +138,6 @@ export const useTemplates = () => {
     }
   };
 
-  // Copia de texto ya formateado con variables
   const handleCopyFormatted = async (templateId: number, formattedContent: string) => {
     try {
       await navigator.clipboard.writeText(formattedContent);
@@ -152,11 +176,15 @@ export const useTemplates = () => {
     brands,
     categories,
     query,
-    setQuery,
+    setQuery: handleSetQuery,
     selectedBrand,
-    setSelectedBrand,
+    setSelectedBrand: handleSetBrand,
     selectedCategory,
-    setSelectedCategory,
+    setSelectedCategory: handleSetCategory,
+    page,
+    setPage,
+    totalPages,
+    totalElements,
     copiedId,
     loading,
     handleCopy,

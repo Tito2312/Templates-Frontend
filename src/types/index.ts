@@ -41,3 +41,12 @@ export interface AuthResponse {
   token: string;
   user: User;
 }
+
+export interface PaginatedResponse<T> {
+  content: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
+  isLast: boolean;
+}
