@@ -7,7 +7,10 @@ import { NewTemplateModal } from './components/templates/NewTemplateModal';
 import { ManageCategoriesModal } from './components/ui/ManageCategoriesModal';
 import { FillVariablesModal } from './components/templates/FillVariablesModal';
 import { AuthModal } from './components/auth/AuthModal';
+import { ConfirmModal } from './components/ui/ConfirmModal';
+import { ToastContainer } from './components/ui/Toast';
 import { useTemplates } from './hooks/useTemplates';
+import { useToast } from './hooks/useToast';
 import { extractVariables } from './utils/templateUtils';
 import { session } from './utils/session';
 import type { User, TemplateResponse, TemplateRequest } from './types';
@@ -19,9 +22,16 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateResponse | null>(null);
 
+  // Estados para el Modal de Confirmación de Eliminación
+  const [deletingTemplateId, setDeletingTemplateId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Estados para el Modal de Variables Dinámicas
   const [variableTemplate, setVariableTemplate] = useState<TemplateResponse | null>(null);
   const [detectedVariables, setDetectedVariables] = useState<string[]>([]);
+
+  // Hook de Notificaciones Flotantes
+  const { toasts, showToast, removeToast } = useToast();
 
   const {
     templates,
@@ -49,13 +59,15 @@ export default function App() {
     setCurrentUser(user);
     setIsAuthModalOpen(false);
     refreshTemplates();
+    showToast(`¡Bienvenido de nuevo, ${user?.username || ''}!`, 'success');
   };
 
   const handleLogout = () => {
-    session.clearSession();
+    session.clear(); // Corregido: se usa .clear() de session.ts
     setCurrentUser(null);
     clearData();
     setIsAuthModalOpen(true);
+    showToast('Sesión cerrada correctamente', 'info');
   };
 
   const handleOpenCreateModal = () => {
@@ -68,17 +80,39 @@ export default function App() {
     setIsTemplateModalOpen(true);
   };
 
-  const handleSubmitTemplate = async (data: Omit<TemplateRequest, 'userId'>) => {
-    if (editingTemplate) {
-      await handleUpdate(editingTemplate.id, data);
-    } else {
-      await handleCreate(data);
+  const handleSubmitTemplate = async (data: TemplateRequest) => {
+    try {
+      if (editingTemplate) {
+        await handleUpdate(editingTemplate.id, data);
+        showToast('Plantilla actualizada con éxito', 'success');
+      } else {
+        await handleCreate(data);
+        showToast('Plantilla creada con éxito', 'success');
+      }
+      setIsTemplateModalOpen(false);
+      setEditingTemplate(null);
+    } catch {
+      showToast('Error al guardar la plantilla', 'error');
     }
-    setEditingTemplate(null);
+  };
+
+  // Confirmación y ejecución de borrado
+  const handleConfirmDelete = async () => {
+    if (!deletingTemplateId) return;
+    setIsDeleting(true);
+    try {
+      await handleDelete(deletingTemplateId);
+      showToast('Plantilla eliminada correctamente', 'success');
+    } catch  {
+      showToast('Error al eliminar la plantilla', 'error');
+    } finally {
+      setIsDeleting(false);
+      setDeletingTemplateId(null);
+    }
   };
 
   // Interceptor del botón de copiar
-  const handleCopyClick = (template: TemplateResponse) => {
+  const handleCopyClick = async (template: TemplateResponse) => {
     const vars = extractVariables(template.content);
     if (vars.length > 0) {
       // Tiene variables -> Abrir modal
@@ -86,12 +120,16 @@ export default function App() {
       setDetectedVariables(vars);
     } else {
       // No tiene variables -> Copia directa
-      handleCopy(template);
+      await handleCopy(template);
+      showToast('¡Texto copiado al portapapeles!', 'success');
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans relative">
+      {/* Sistema Global de Notificaciones Toast */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+
       <Header
         currentUser={currentUser}
         onOpenModal={handleOpenCreateModal}
@@ -140,12 +178,13 @@ export default function App() {
             templates={templates}
             copiedId={copiedId}
             onCopy={handleCopyClick}
-            onDelete={handleDelete}
+            onDelete={(id) => setDeletingTemplateId(id)}
             onEdit={handleOpenEditModal}
           />
         )}
       </main>
 
+      {/* Modal para Crear / Editar Plantilla */}
       <NewTemplateModal
         key={editingTemplate ? `edit-${editingTemplate.id}` : 'new-template'}
         isOpen={isTemplateModalOpen}
@@ -159,6 +198,7 @@ export default function App() {
         onSubmit={handleSubmitTemplate}
       />
 
+      {/* Modal de Gestión de Categorías y Marcas */}
       <ManageCategoriesModal
         isOpen={isCategoriesModalOpen}
         onClose={() => setIsCategoriesModalOpen(false)}
@@ -171,13 +211,25 @@ export default function App() {
         template={variableTemplate}
         variables={detectedVariables}
         onClose={() => setVariableTemplate(null)}
-        onCopyFormatted={(formattedText) => {
+        onCopyFormatted={async (formattedText) => {
           if (variableTemplate) {
-            handleCopyFormatted(variableTemplate.id, formattedText);
+            await handleCopyFormatted(variableTemplate.id, formattedText);
+            showToast('¡Texto formateado copiado!', 'success');
           }
         }}
       />
 
+      {/* Modal de Confirmación de Eliminación */}
+      <ConfirmModal
+        isOpen={deletingTemplateId !== null}
+        title="¿Eliminar plantilla?"
+        message="¿Estás seguro de que deseas eliminar esta plantilla? Esta acción no se puede deshacer."
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeletingTemplateId(null)}
+      />
+
+      {/* Modal de Autenticación */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onLoginSuccess={handleLoginSuccess}
