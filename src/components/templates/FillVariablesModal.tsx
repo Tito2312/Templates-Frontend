@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Check, Image as ImageIcon, FileText } from 'lucide-react';
+import { X, Check, Image as ImageIcon, FileText, Sparkles } from 'lucide-react';
 import type { TemplateResponse } from '../../types';
 import { copyImageToClipboard } from '../../utils/clipboardUtils';
 
@@ -16,13 +16,10 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
   template,
   onClose,
   onCopyFilledText,
-  themeColor,
 }) => {
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
   const [isCopied, setIsCopied] = useState(false);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
-
-  const activeColor = themeColor || '#6366f1';
 
   // Extraemos las variables dinámicamente durante el render sin necesidad de useEffect/setState
   const variablesList = useMemo(() => {
@@ -65,16 +62,25 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-theme-surface border border-theme rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-300">
         
         {/* Encabezado */}
-        <div className="flex justify-between items-center p-5 border-b border-slate-700">
-          <div>
-            <h2 className="text-lg font-bold text-slate-100">Completar Variables</h2>
-            <p className="text-xs text-slate-400">{template.title}</p>
+        <div className="flex justify-between items-center p-5 border-b border-theme/80">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-theme-elevated border border-theme rounded-xl text-theme-accent">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-theme-primary">Completar Variables</h2>
+              <p className="text-[11px] text-theme-muted">{template.title}</p>
+            </div>
           </div>
-          <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-200 transition cursor-pointer">
+          <button 
+            type="button" 
+            onClick={handleCloseModal} 
+            className="text-theme-muted hover:text-theme-primary transition cursor-pointer"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -82,13 +88,13 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
         <div className="p-5 overflow-y-auto space-y-4">
           {/* Campos dinámicos */}
           {variablesList.length > 0 && (
-            <div className="space-y-3 bg-slate-900/50 p-4 rounded-xl border border-slate-700/60">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="space-y-3 bg-theme-elevated/50 p-4 rounded-xl border border-theme/60">
+              <h3 className="text-xs font-semibold text-theme-muted uppercase tracking-wider">
                 Campos Dinámicos
               </h3>
               {variablesList.map((varName) => (
                 <div key={varName} className="space-y-1">
-                  <label className="text-xs font-medium text-slate-300 capitalize">
+                  <label className="text-xs font-medium text-theme-primary capitalize">
                     {varName}
                   </label>
                   <input
@@ -98,7 +104,7 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
                       setVariableValues({ ...variableValues, [varName]: e.target.value })
                     }
                     placeholder={`Ingresa ${varName}...`}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 transition outline-none"
+                    className="w-full bg-theme-elevated border border-theme rounded-xl px-3.5 py-2 text-xs text-theme-primary placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 transition"
                   />
                 </div>
               ))}
@@ -107,9 +113,9 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
 
           {/* Previsualización de Imagen opcional */}
           {template.imageUrl && (
-            <div className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900/50 p-2">
-              <span className="text-[11px] font-medium text-slate-400 mb-2 flex items-center gap-1">
-                <ImageIcon className="w-3.5 h-3.5 text-indigo-400" /> Imagen adjunta
+            <div className="rounded-xl overflow-hidden border border-theme bg-theme-elevated/40 p-3 space-y-2">
+              <span className="text-[11px] font-medium text-theme-muted flex items-center gap-1">
+                <ImageIcon className="w-3.5 h-3.5 text-theme-accent" /> Imagen adjunta
               </span>
               <img src={template.imageUrl} alt="Preview" className="max-h-36 w-full object-contain rounded-lg" />
             </div>
@@ -117,19 +123,21 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
 
           {/* Vista previa del resultado */}
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-400">Vista previa del resultado</label>
-            <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-3 text-xs font-mono text-slate-200 whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed">
+            <label className="text-xs font-semibold text-theme-muted flex items-center gap-1">
+              <FileText className="w-3.5 h-3.5 text-theme-accent" /> Vista previa del resultado
+            </label>
+            <div className="bg-theme-elevated/80 border border-theme/60 rounded-xl p-3.5 text-xs font-mono text-theme-primary/90 whitespace-pre-wrap max-h-40 overflow-y-auto custom-scrollbar leading-relaxed">
               {getFilledContent()}
             </div>
           </div>
         </div>
 
         {/* Acciones */}
-        <div className="flex items-center justify-between p-4 border-t border-slate-700 bg-slate-800/80">
+        <div className="flex items-center justify-between p-4 border-t border-theme bg-theme-surface/80">
           <button
             type="button"
             onClick={handleCloseModal}
-            className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200 transition cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-theme-muted hover:text-theme-primary transition cursor-pointer"
           >
             Cerrar
           </button>
@@ -139,7 +147,7 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
               <button
                 type="button"
                 onClick={handleCopyImage}
-                className="px-3.5 py-2 text-slate-200 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-medium transition flex items-center gap-1.5 shadow-md cursor-pointer"
+                className="px-3.5 py-2 text-theme-primary bg-theme-elevated hover:bg-theme-elevated/80 border border-theme rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-md cursor-pointer"
               >
                 {copyStatus ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />}
                 {copyStatus || 'Copiar Imagen'}
@@ -149,8 +157,7 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
             <button
               type="button"
               onClick={handleCopyText}
-              style={{ backgroundColor: activeColor }}
-              className="px-4 py-2 text-white rounded-xl text-xs font-medium hover:brightness-110 transition flex items-center gap-1.5 shadow-md cursor-pointer"
+              className="btn-theme-primary px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md cursor-pointer"
             >
               {isCopied ? <Check className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
               {isCopied ? '¡Texto Copiado!' : 'Copiar Texto'}

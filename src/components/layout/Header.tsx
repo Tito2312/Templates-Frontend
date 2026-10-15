@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Bookmark, FolderPlus, User as UserIcon, LogOut, LogIn } from 'lucide-react';
+import { Plus, FolderCog, LogIn, LogOut, User as UserIcon, Sparkles } from 'lucide-react';
 import type { User } from '../../types';
 
 interface HeaderProps {
@@ -17,68 +17,80 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCategoriesModal,
   onOpenAuthModal,
   onLogout,
-  themeColor,
 }) => {
-  const activeColor = themeColor || '#6366f1';
-
   return (
-    <header className="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-10 shadow-lg">
-      <div className="flex items-center space-x-3">
-        <div 
-          style={{ backgroundColor: activeColor }} 
-          className="p-2 rounded-lg transition-colors duration-300"
-        >
-          <Bookmark className="w-6 h-6 text-white" />
+    <header className="bg-theme-surface/80 backdrop-blur-md border-b border-theme/80 sticky top-0 z-40 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
+        
+        {/* Identidad de la App */}
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-theme-elevated border border-theme rounded-xl text-theme-accent shadow-sm">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-theme-primary tracking-tight">
+              GESTOR DE PLANTILLAS
+            </h1>
+            <p className="text-[11px] text-theme-muted hidden sm:block">
+              Respuestas rápidas para atención a clientes
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-wide text-slate-100">SAC Response Hub</h1>
-          <p className="text-xs text-slate-400">Gestor rápido de plantillas de atención</p>
+
+        {/* Acciones */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {currentUser ? (
+            <>
+              {/* Botón Administrar Categorías */}
+              <button
+                type="button"
+                onClick={onOpenCategoriesModal}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-theme-elevated hover:bg-theme-elevated/80 text-theme-primary border border-theme transition flex items-center gap-2 cursor-pointer shadow-sm"
+                title="Administrar Categorías"
+              >
+                <FolderCog className="w-4 h-4 text-theme-accent" />
+                <span className="hidden sm:inline">Categorías</span>
+              </button>
+
+              {/* Botón Nueva Plantilla */}
+              <button
+                type="button"
+                onClick={onOpenModal}
+                className="btn-theme-primary px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-md hover:brightness-110 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nueva Plantilla</span>
+              </button>
+
+              {/* Indicador de Usuario + Logout */}
+              <div className="flex items-center gap-1.5 pl-2 border-l border-theme/80">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-theme-elevated/50 text-xs text-theme-muted">
+                  <UserIcon className="w-3.5 h-3.5 text-theme-accent" />
+                  <span className="font-medium text-theme-primary hidden md:inline">
+                    {currentUser.username}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="p-2 text-theme-muted hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition cursor-pointer"
+                  title="Cerrar Sesión"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpenAuthModal}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-theme-elevated hover:bg-theme-elevated/80 text-theme-primary border border-theme transition flex items-center gap-2 shadow-sm cursor-pointer"
+            >
+              <LogIn className="w-4 h-4 text-theme-accent" />
+              <span>Iniciar Sesión</span>
+            </button>
+          )}
         </div>
-      </div>
-
-      <div className="flex items-center space-x-3">
-        {currentUser ? (
-          <>
-            <div className="flex items-center space-x-2 px-3 py-1.5 bg-slate-900/60 border border-slate-700 rounded-lg text-xs text-slate-300">
-              <UserIcon className="w-3.5 h-3.5" style={{ color: activeColor }} />
-              <span className="font-medium text-slate-200">{currentUser.username}</span>
-            </div>
-
-            <button
-              onClick={onOpenCategoriesModal}
-              className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg flex items-center space-x-1.5 transition text-xs font-medium"
-            >
-              <FolderPlus className="w-3.5 h-3.5" />
-              <span>Categorías</span>
-            </button>
-
-            <button
-              onClick={onOpenModal}
-              style={{ backgroundColor: activeColor }}
-              className="text-white px-3.5 py-2 rounded-lg flex items-center space-x-1.5 transition text-xs font-medium hover:brightness-110 shadow-md"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Nueva Plantilla</span>
-            </button>
-
-            <button
-              onClick={onLogout}
-              title="Cerrar sesión"
-              className="p-2 bg-slate-700/50 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={onOpenAuthModal}
-            style={{ backgroundColor: activeColor }}
-            className="text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition text-xs font-medium hover:brightness-110 shadow-md"
-          >
-            <LogIn className="w-4 h-4" />
-            <span>Iniciar Sesión / Registro</span>
-          </button>
-        )}
       </div>
     </header>
   );

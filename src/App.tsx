@@ -14,6 +14,7 @@ import { useTemplates } from './hooks/useTemplates';
 import { useToast } from './hooks/useToast';
 import { extractVariables } from './utils/templateUtils';
 import { session } from './utils/session';
+import { generateThemeFromHex } from './utils/themeGenerator';
 import type { User, TemplateResponse, TemplateRequest } from './types';
 
 export default function App() {
@@ -123,28 +124,38 @@ export default function App() {
     }
   };
 
-  // COLOR DE LA MARCA O COLOR DEFAULT (Índigo #6366f1)
+  // 1. Obtener la marca seleccionada y calcular su paleta armónica
   const activeBrandObject = brands.find(
     (b) => b.name.toLowerCase() === selectedBrand?.toLowerCase()
   );
-  const themeColor = activeBrandObject?.colorHex || '#6366f1';
+
+  const currentPalette = generateThemeFromHex(activeBrandObject?.colorHex);
 
   return (
     <div 
-      className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans relative transition-colors duration-500 overflow-x-hidden"
-      style={{ '--theme-color': themeColor } as React.CSSProperties}
+      className="min-h-screen bg-theme-base text-theme-primary flex flex-col font-sans relative transition-colors duration-500 overflow-x-hidden"
+      style={{
+        '--color-primary': currentPalette.primary,
+        '--color-primary-hover': currentPalette.primaryHover,
+        '--color-bg-base': currentPalette.bgBase,
+        '--color-bg-surface': currentPalette.bgSurface,
+        '--color-bg-elevated': currentPalette.bgElevated,
+        '--color-border': currentPalette.border,
+        '--color-text-primary': currentPalette.textPrimary,
+        '--color-text-muted': currentPalette.textMuted,
+      } as React.CSSProperties}
     >
-      {/* 1. Línea Superior de Marca */}
+      {/* Línea Superior Accent de la Marca */}
       <div 
         className="h-1.5 w-full transition-all duration-500 z-50 shrink-0" 
-        style={{ backgroundColor: themeColor }} 
+        style={{ backgroundColor: currentPalette.primary }} 
       />
 
-      {/* 2. Atmósfera Masiva de Fondo */}
+      {/* Atmósfera Suave de Fondo */}
       <div
-        className="pointer-events-none fixed inset-0 opacity-25 transition-all duration-700 ease-in-out z-0"
+        className="pointer-events-none fixed inset-0 opacity-20 transition-all duration-700 ease-in-out z-0"
         style={{
-          background: `radial-gradient(circle at 50% 15%, ${themeColor} 0%, transparent 65%)`
+          background: `radial-gradient(circle at 50% 15%, ${currentPalette.primary} 0%, transparent 65%)`
         }}
       />
 
@@ -158,7 +169,7 @@ export default function App() {
           onOpenCategoriesModal={() => setIsCategoriesModalOpen(true)}
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
           onLogout={handleLogout}
-          themeColor={themeColor}
+          themeColor={currentPalette.primary}
         />
 
         <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
@@ -193,7 +204,7 @@ export default function App() {
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-slate-400 font-medium">
+            <div className="text-center py-12 text-theme-muted font-medium">
               Cargando plantillas...
             </div>
           ) : (
@@ -204,7 +215,7 @@ export default function App() {
                 onCopy={handleCopyClick}
                 onDelete={(id) => setDeletingTemplateId(id)}
                 onEdit={handleOpenEditModal}
-                themeColor={themeColor}
+                themeColor={currentPalette.primary}
               />
 
               <Pagination
@@ -248,7 +259,7 @@ export default function App() {
             setVariableTemplate(null);
           }
         }}
-        themeColor={themeColor}
+        themeColor={currentPalette.primary}
       />
 
       <ConfirmModal
@@ -260,6 +271,7 @@ export default function App() {
         onCancel={() => setDeletingTemplateId(null)}
       />
 
+      {/* AuthModal protegido y sin modificar */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onLoginSuccess={handleLoginSuccess}

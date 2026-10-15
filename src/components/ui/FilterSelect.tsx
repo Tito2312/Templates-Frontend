@@ -1,5 +1,4 @@
 import React from 'react';
-import { Filter } from 'lucide-react';
 
 interface Option {
   id: number;
@@ -15,29 +14,29 @@ interface FilterSelectProps {
 }
 
 export const FilterSelect: React.FC<FilterSelectProps> = ({
-  label,
   value,
   options,
   onChange,
   defaultText,
 }) => {
   return (
-    <div className="flex flex-col gap-1 w-full">
-      <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-        <Filter className="w-3 h-3 text-indigo-400" /> {label}
-      </label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 bg-slate-800 border border-slate-700/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition cursor-pointer"
-      >
-        <option value="">{defaultText}</option>
-        {options.map((opt) => (
-          <option key={opt.id} value={opt.name}>
-            {opt.name}
-          </option>
-        ))}
-      </select>
-    </div>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full bg-theme-surface/90 border border-theme rounded-xl px-3.5 py-2.5 text-xs text-theme-primary focus:outline-none focus:ring-2 focus:ring-theme-accent/50 transition shadow-sm cursor-pointer"
+    >
+      <option value="" className="bg-theme-surface text-theme-primary">
+        {defaultText}
+      </option>
+      {options.map((opt) => (
+        <option
+          key={opt.id}
+          value={opt.name}
+          className="bg-theme-surface text-theme-primary"
+        >
+          {opt.name}
+        </option>
+      ))}
+    </select>
   );
 };

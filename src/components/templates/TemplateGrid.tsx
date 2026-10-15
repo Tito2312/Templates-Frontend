@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookmarkX } from 'lucide-react';
+import { FileQuestion } from 'lucide-react';
 import { TemplateCard } from './TemplateCard';
 import type { TemplateResponse } from '../../types';
 
@@ -8,7 +8,7 @@ interface TemplateGridProps {
   copiedId: number | null;
   onCopy: (template: TemplateResponse) => void;
   onDelete: (id: number) => void;
-  onEdit?: (template: TemplateResponse) => void;
+  onEdit: (template: TemplateResponse) => void;
   themeColor?: string;
 }
 
@@ -18,19 +18,19 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({
   onCopy,
   onDelete,
   onEdit,
-  themeColor
+  themeColor,
 }) => {
   if (templates.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 px-4 bg-slate-800/40 border border-dashed border-slate-700 rounded-2xl text-center">
-        <div className="p-4 bg-slate-800 rounded-full mb-3 text-slate-400">
-          <BookmarkX className="w-8 h-8" />
+      <div className="bg-theme-surface border border-theme rounded-2xl p-12 text-center max-w-md mx-auto shadow-xl transition-colors duration-300">
+        <div className="p-3 bg-theme-elevated border border-theme rounded-2xl w-fit mx-auto mb-4 text-theme-accent">
+          <FileQuestion className="w-8 h-8" />
         </div>
-        <h3 className="text-base font-semibold text-slate-200 mb-1">
+        <h3 className="text-base font-bold text-theme-primary mb-1">
           No se encontraron plantillas
         </h3>
-        <p className="text-xs text-slate-400 max-w-sm">
-          Intenta ajustar los criterios de búsqueda/filtros o crea una nueva plantilla desde el botón superior.
+        <p className="text-xs text-theme-muted">
+          Intenta cambiar los términos de búsqueda o selecciona otra marca o categoría.
         </p>
       </div>
     );

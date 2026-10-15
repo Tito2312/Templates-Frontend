@@ -4,33 +4,41 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
-  onPageChange: (newPage: number) => void;
+  onPageChange: (page: number) => void;
 }
 
-export const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPageChange }) => {
+export const Pagination: React.FC<PaginationProps> = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+}) => {
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-center gap-3 py-4">
+    <div className="flex items-center justify-center gap-2 pt-6">
       <button
+        type="button"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0}
-        className="p-2 bg-slate-800 border border-slate-700 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-slate-300 transition-colors"
+        className="p-2 bg-theme-surface border border-theme rounded-xl text-theme-primary hover:bg-theme-elevated transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+        title="Página anterior"
       >
-        <ChevronLeft className="w-5 h-5" />
+        <ChevronLeft className="w-4 h-4" />
       </button>
 
-      <span className="text-sm font-medium text-slate-400">
-        Página <strong className="text-slate-100">{currentPage + 1}</strong> de{' '}
-        <strong className="text-slate-100">{totalPages}</strong>
+      <span className="text-xs text-theme-muted font-medium px-3">
+        Página <strong className="text-theme-primary">{currentPage + 1}</strong> de{' '}
+        <strong className="text-theme-primary">{totalPages}</strong>
       </span>
 
       <button
+        type="button"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage >= totalPages - 1}
-        className="p-2 bg-slate-800 border border-slate-700 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-slate-300 transition-colors"
+        className="p-2 bg-theme-surface border border-theme rounded-xl text-theme-primary hover:bg-theme-elevated transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+        title="Página siguiente"
       >
-        <ChevronRight className="w-5 h-5" />
+        <ChevronRight className="w-4 h-4" />
       </button>
     </div>
   );

@@ -1,13 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { X, UploadCloud, Loader2, Image as ImageIcon } from 'lucide-react';
+import { X, Plus, Save, Image as ImageIcon, Briefcase, Tag, FileText, Upload, Link, Trash2 } from 'lucide-react';
 import type { Brand, Category, TemplateRequest, TemplateResponse } from '../../types';
-import { session } from '../../utils/session';
 
 interface NewTemplateModalProps {
   isOpen: boolean;
   brands: Brand[];
   categories: Category[];
-  templateToEdit: TemplateResponse | null;
+  templateToEdit?: TemplateResponse | null;
   onClose: () => void;
   onSubmit: (data: TemplateRequest) => Promise<void>;
 }
@@ -20,229 +19,284 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  // Inicializamos el estado 1 sola vez leyendo las props directamente al montar
-  const [formData, setFormData] = useState<TemplateRequest>(() => ({
-    title: templateToEdit?.title || '',
-    content: templateToEdit?.content || '',
-    brandId: templateToEdit?.brandId || undefined,
-    categoryId: templateToEdit?.categoryId || undefined,
-    imageUrl: templateToEdit?.imageUrl || '',
-  }));
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [title, setTitle] = useState(templateToEdit?.title || '');
+  const [content, setContent] = useState(templateToEdit?.content || '');
+  const [brandId, setBrandId] = useState<number | ''>(templateToEdit?.brandId || '');
+  const [categoryId, setCategoryId] = useState<number | ''>(templateToEdit?.categoryId || '');
+  const [imageUrl, setImageUrl] = useState(templateToEdit?.imageUrl || '');
+  const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const resetForm = () => {
-    setFormData({ title: '', content: '', brandId: undefined, categoryId: undefined, imageUrl: '' });
-  };
-
-  const handleCloseModal = () => {
-    resetForm();
-    onClose();
-  };
-
-  const handleFileUpload = async (file: File) => {
+  // Procesar archivo de imagen local a Data URL / Base64
+  const processFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Por favor, selecciona un archivo de imagen válido (JPG, PNG, GIF, etc.).');
+      alert('Por favor selecciona un archivo de imagen válido.');
       return;
     }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        setImageUrl(e.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
-    setIsUploading(true);
-    try {
-      const data = new FormData();
-      data.append('file', file);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processFile(file);
+    }
+  };
 
-      const token = session.getToken();
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
 
-      const response = await fetch(`${apiUrl}/api/images/upload`, {
-        method: 'POST',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: data,
-      });
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
 
-      if (!response.ok) throw new Error('Error al subir la imagen');
-
-      const result = await response.json();
-      setFormData(prev => ({ ...prev, imageUrl: result.url }));
-      
-    } catch (error) {
-      console.error('Error subiendo imagen:', error);
-      alert('Ocurrió un error al subir la imagen. Inténtalo de nuevo.');
-    } finally {
-      setIsUploading(false);
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processFile(file);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!title.trim() || !content.trim()) return;
+
     setIsSubmitting(true);
-    await onSubmit(formData);
-    setIsSubmitting(false);
-    resetForm();
+    try {
+      await onSubmit({
+        title: title.trim(),
+        content: content.trim(),
+        brandId: brandId ? Number(brandId) : undefined,
+        categoryId: categoryId ? Number(categoryId) : undefined,
+        imageUrl: imageUrl.trim() || undefined,
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error enviando plantilla:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-theme-surface border border-theme rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-300">
         
-        <div className="flex justify-between items-center p-6 border-b border-slate-700">
-          <h2 className="text-xl font-bold text-slate-100">
-            {templateToEdit ? 'Editar Plantilla' : 'Nueva Plantilla'}
-          </h2>
-          <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-200 transition">
+        {/* Encabezado */}
+        <div className="flex justify-between items-center p-5 border-b border-theme/80">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-theme-elevated border border-theme rounded-xl text-theme-accent">
+              {templateToEdit ? <Save className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+            </div>
+            <h2 className="text-base font-bold text-theme-primary">
+              {templateToEdit ? 'Editar Plantilla' : 'Nueva Plantilla'}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-theme-muted hover:text-theme-primary transition cursor-pointer"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="text-sm font-medium text-slate-300">Título de la plantilla</label>
-              <input
-                type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition outline-none"
-                placeholder="Ej. Bienvenida a Casino..."
-              />
-            </div>
+        {/* Formulario */}
+        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4">
+          {/* Título */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-theme-muted">Título de la Plantilla *</label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ej: Saludo Inicial Clientes..."
+              className="w-full bg-theme-elevated border border-theme rounded-xl px-3.5 py-2.5 text-xs text-theme-primary placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 transition"
+            />
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-300">Marca (Opcional)</label>
+          {/* Selects: Marca y Categoría */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-theme-muted flex items-center gap-1">
+                <Briefcase className="w-3.5 h-3.5 text-theme-accent" /> Marca
+              </label>
               <select
-                value={formData.brandId || ''}
-                onChange={(e) => setFormData({ ...formData, brandId: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:ring-2 focus:ring-indigo-500 transition outline-none"
+                value={brandId}
+                onChange={(e) => setBrandId(e.target.value ? Number(e.target.value) : '')}
+                className="w-full bg-theme-elevated border border-theme rounded-xl px-3 py-2 text-xs text-theme-primary focus:outline-none focus:ring-2 focus:ring-theme-accent/50 transition cursor-pointer"
               >
-                <option value="">Ninguna</option>
-                {brands.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
+                <option value="" className="bg-theme-surface">Sin Marca</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id} className="bg-theme-surface">
+                    {b.name}
+                  </option>
                 ))}
               </select>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-300">Categoría (Opcional)</label>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-theme-muted flex items-center gap-1">
+                <Tag className="w-3.5 h-3.5 text-emerald-400" /> Categoría
+              </label>
               <select
-                value={formData.categoryId || ''}
-                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:ring-2 focus:ring-indigo-500 transition outline-none"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
+                className="w-full bg-theme-elevated border border-theme rounded-xl px-3 py-2 text-xs text-theme-primary focus:outline-none focus:ring-2 focus:ring-theme-accent/50 transition cursor-pointer"
               >
-                <option value="">Ninguna</option>
-                {categories.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                <option value="" className="bg-theme-surface">Sin Categoría</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id} className="bg-theme-surface">
+                    {c.name}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* --- ZONA DRAG & DROP --- */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300 flex items-center gap-1.5">
-              <ImageIcon className="w-4 h-4 text-indigo-400" />
-              Imagen Adjunta (Opcional)
-            </label>
-            
-            {formData.imageUrl ? (
-              <div className="relative rounded-xl overflow-hidden border border-slate-700 bg-slate-900/50 flex items-center justify-center h-48 group">
-                <img src={formData.imageUrl} alt="Preview" className="h-full w-full object-contain" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, imageUrl: '' })}
-                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium shadow-lg transition flex items-center gap-2 cursor-pointer"
-                  >
-                    <X className="w-4 h-4" /> Eliminar Imagen
-                  </button>
-                </div>
+          {/* Zona de Carga / Arrastrar Imagen */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-theme-muted flex items-center gap-1">
+                <ImageIcon className="w-3.5 h-3.5 text-theme-accent" /> Imagen Adjunta (Opcional)
+              </label>
+
+              {/* Selector Modo Subida: Archivo vs URL */}
+              <div className="flex gap-1 p-0.5 bg-theme-elevated border border-theme rounded-lg text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setUploadMode('file')}
+                  className={`px-2 py-0.5 rounded-md transition ${
+                    uploadMode === 'file'
+                      ? 'bg-theme-surface text-theme-primary font-bold shadow-sm'
+                      : 'text-theme-muted hover:text-theme-primary'
+                  }`}
+                >
+                  Archivo / Arrastrar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUploadMode('url')}
+                  className={`px-2 py-0.5 rounded-md transition ${
+                    uploadMode === 'url'
+                      ? 'bg-theme-surface text-theme-primary font-bold shadow-sm'
+                      : 'text-theme-muted hover:text-theme-primary'
+                  }`}
+                >
+                  URL Externa
+                </button>
               </div>
-            ) : (
+            </div>
+
+            {/* Si ya hay imagen, mostrar vista previa con opción de eliminar */}
+            {imageUrl ? (
+              <div className="relative border border-theme rounded-xl p-2 bg-theme-elevated/40 flex items-center gap-3">
+                <img src={imageUrl} alt="Preview" className="w-16 h-16 object-cover rounded-lg border border-theme" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-theme-primary truncate">Imagen cargada</p>
+                  <p className="text-[10px] text-theme-muted truncate">{imageUrl.startsWith('data:') ? 'Archivo local' : imageUrl}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setImageUrl('')}
+                  className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
+                  title="Quitar imagen"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ) : uploadMode === 'file' ? (
+              /* Dropzone para Arrastrar o Subir Archivo */
               <div
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragging(false);
-                  const file = e.dataTransfer.files?.[0];
-                  if (file) handleFileUpload(file);
-                }}
-                onClick={() => !isUploading && fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all h-48 ${
-                  isDragging 
-                    ? 'border-indigo-400 bg-indigo-500/10' 
-                    : 'border-slate-700 hover:border-slate-500 bg-slate-900/50 cursor-pointer'
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2 ${
+                  isDragging
+                    ? 'border-theme-accent bg-theme-accent/10'
+                    : 'border-theme hover:border-theme-accent/60 bg-theme-elevated/30 hover:bg-theme-elevated/60'
                 }`}
               >
                 <input
                   type="file"
                   ref={fileInputRef}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(file);
-                  }}
+                  onChange={handleFileChange}
                   accept="image/*"
                   className="hidden"
                 />
-                
-                {isUploading ? (
-                  <div className="flex flex-col items-center">
-                    <Loader2 className="w-10 h-10 text-indigo-400 animate-spin mb-3" />
-                    <p className="text-sm font-medium text-slate-300">Subiendo a Cloudinary...</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center">
-                    <div className={`p-3 rounded-full mb-3 transition-colors ${isDragging ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-400'}`}>
-                      <UploadCloud className="w-8 h-8" />
-                    </div>
-                    <p className="text-sm font-medium text-slate-200">
-                      Haz clic para explorar o arrastra una imagen aquí
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">Soporta JPG, PNG, WEBP, GIF</p>
-                  </div>
-                )}
+                <div className="p-2.5 bg-theme-elevated border border-theme rounded-xl text-theme-accent">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-theme-primary">
+                    Haz clic para seleccionar o <span className="text-theme-accent">arrastra una imagen aquí</span>
+                  </p>
+                  <p className="text-[10px] text-theme-muted mt-0.5">PNG, JPG, GIF o WEBP</p>
+                </div>
+              </div>
+            ) : (
+              /* Input de URL */
+              <div className="relative">
+                <Link className="w-4 h-4 text-theme-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://ejemplo.com/imagen.png"
+                  className="w-full bg-theme-elevated border border-theme rounded-xl pl-9 pr-3.5 py-2 text-xs text-theme-primary placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 transition"
+                />
               </div>
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300">Contenido (Usa [variable] para dinámicos)</label>
+          {/* Contenido / Texto */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-theme-muted flex items-center gap-1">
+              <FileText className="w-3.5 h-3.5 text-theme-accent" /> Contenido *
+            </label>
             <textarea
               required
-              rows={6}
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 font-mono text-sm focus:ring-2 focus:ring-indigo-500 transition outline-none resize-none"
-              placeholder={"Hola [nombre],\n\nTe informamos que tu retiro por [monto] ha sido procesado."}
+              rows={5}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Escribe aquí el texto de tu respuesta. Usa [nombre] para variables dinámicas..."
+              className="w-full bg-theme-elevated border border-theme rounded-xl p-3 text-xs text-theme-primary placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 transition font-mono leading-relaxed"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
+          {/* Footer */}
+          <div className="pt-2 flex items-center justify-end gap-3 border-t border-theme/60">
             <button
               type="button"
-              onClick={handleCloseModal}
-              disabled={isSubmitting || isUploading}
-              className="px-5 py-2.5 text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-lg transition disabled:opacity-50 cursor-pointer"
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-semibold text-theme-muted hover:text-theme-primary transition cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || isUploading}
-              className="px-5 py-2.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg transition flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              disabled={isSubmitting}
+              className="btn-theme-primary px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-md disabled:opacity-50 cursor-pointer"
             >
-              {isSubmitting ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>
-              ) : (
-                templateToEdit ? 'Actualizar Plantilla' : 'Crear Plantilla'
-              )}
+              {isSubmitting ? 'Guardando...' : templateToEdit ? 'Actualizar' : 'Crear Plantilla'}
             </button>
           </div>
         </form>

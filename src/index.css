@@ -1,1 +1,39 @@
 @import "tailwindcss";
+
+@layer utilities {
+  /* Fondos armónicos */
+  .bg-theme-base {
+    background-color: var(--color-bg-base, #0f172a);
+  }
+  .bg-theme-surface {
+    background-color: var(--color-bg-surface, #1e293b);
+  }
+  .bg-theme-elevated {
+    background-color: var(--color-bg-elevated, #334155);
+  }
+
+  /* Bordes */
+  .border-theme {
+    border-color: var(--color-border, #334155);
+  }
+
+  /* Textos */
+  .text-theme-primary {
+    color: var(--color-text-primary, #f8fafc);
+  }
+  .text-theme-muted {
+    color: var(--color-text-muted, #94a3b8);
+  }
+  .text-theme-accent {
+    color: var(--color-primary, #6366f1);
+  }
+
+  /* Botón Principal */
+  .btn-theme-primary {
+    background-color: var(--color-primary, #6366f1);
+    color: #ffffff;
+  }
+  .btn-theme-primary:hover {
+    background-color: var(--color-primary-hover, #4f46e5);
+  }
+}
