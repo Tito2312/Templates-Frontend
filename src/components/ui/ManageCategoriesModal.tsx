@@ -26,23 +26,20 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
   useEffect(() => {
     let isMounted = true;
 
-    const fetchData = async () => {
-      try {
-        const [brandsData, categoriesData] = await Promise.all([
-          brandApi.getBrands(),
-          categoryApi.getCategories(),
-        ]);
-        if (isMounted) {
-          setBrands(brandsData);
-          setCategories(categoriesData);
-        }
-      } catch (err) {
-        console.error('Error al cargar marcas y categorías', err);
-      }
-    };
-
     if (isOpen) {
-      fetchData();
+      Promise.all([
+        brandApi.getBrands(),
+        categoryApi.getCategories(),
+      ])
+        .then(([brandsData, categoriesData]) => {
+          if (isMounted) {
+            setBrands(brandsData);
+            setCategories(categoriesData);
+          }
+        })
+        .catch((err) => {
+          console.error('Error al cargar marcas y categorías', err);
+        });
     }
 
     return () => {
@@ -50,7 +47,6 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
     };
   }, [isOpen]);
 
-  // Si no está abierto, no renderizar nada
   if (!isOpen) return null;
 
   const reloadData = async () => {
@@ -73,7 +69,7 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
     try {
       await brandApi.createBrand(brandName.trim(), brandColor);
       setBrandName('');
-      setBrandColor('#6366f1'); // Restablecer al color base
+      setBrandColor('#6366f1');
       await reloadData();
       onRefresh();
     } catch (err) {
@@ -102,24 +98,21 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 cursor-pointer"
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 cursor-pointer"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-6 cursor-default"
+        className="bg-theme-surface border border-theme rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-6 cursor-default transition-colors duration-300"
       >
         {/* Encabezado */}
-        <div className="flex justify-between items-center border-b border-slate-700 pb-3">
-          <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+        <div className="flex justify-between items-center border-b border-theme/80 pb-3">
+          <h2 className="text-lg font-bold text-theme-primary flex items-center gap-2">
             Gestión de Marcas y Categorías
           </h2>
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-            className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-700 transition cursor-pointer"
+            onClick={onClose}
+            className="text-theme-muted hover:text-theme-primary p-1.5 rounded-lg hover:bg-theme-elevated transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -128,7 +121,7 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Sección Marcas */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-indigo-400 flex items-center gap-1.5 uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-theme-accent flex items-center gap-1.5 uppercase tracking-wider">
               <Briefcase className="w-4 h-4" /> Marcas
             </h3>
             <form onSubmit={handleCreateBrand} className="flex gap-2 items-center">
@@ -137,11 +130,11 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
                 placeholder="Nueva marca..."
-                className="flex-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                className="flex-1 p-2 bg-theme-elevated border border-theme rounded-xl text-xs text-theme-primary placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 transition"
               />
 
               {/* Selector de Color Hexadecimal */}
-              <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1">
+              <div className="flex items-center gap-1 bg-theme-elevated border border-theme rounded-xl px-2 py-1">
                 <input
                   type="color"
                   value={brandColor}
@@ -154,27 +147,27 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
               <button
                 type="submit"
                 disabled={loadingBrand}
-                className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition disabled:opacity-50 flex items-center gap-1"
+                className="btn-theme-primary px-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-50 flex items-center gap-1 shadow-md cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" /> Agregar
               </button>
             </form>
 
-            <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+            <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
               {brands.map((b) => (
                 <div
                   key={b.id}
-                  className="flex justify-between items-center bg-slate-900/60 p-2 rounded-lg text-xs text-slate-300 border border-slate-700/50"
+                  className="flex justify-between items-center bg-theme-elevated/50 p-2.5 rounded-xl text-xs text-theme-primary border border-theme/60"
                 >
                   <div className="flex items-center gap-2">
                     <span
                       className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm shrink-0"
                       style={{ backgroundColor: b.colorHex || '#6366f1' }}
                     />
-                    <span>{b.name}</span>
+                    <span className="font-medium">{b.name}</span>
                   </div>
                   {b.colorHex && (
-                    <span className="text-[10px] font-mono text-slate-500">{b.colorHex}</span>
+                    <span className="text-[10px] font-mono text-theme-muted">{b.colorHex}</span>
                   )}
                 </div>
               ))}
@@ -183,7 +176,7 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
 
           {/* Sección Categorías */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider">
               <Tag className="w-4 h-4" /> Categorías
             </h3>
             <form onSubmit={handleCreateCategory} className="flex gap-2">
@@ -192,24 +185,24 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                 value={categoryName}
                 onChange={(e) => setCategoryName(e.target.value)}
                 placeholder="Nueva categoría..."
-                className="flex-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                className="flex-1 p-2 bg-theme-elevated border border-theme rounded-xl text-xs text-theme-primary placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 transition"
               />
               <button
                 type="submit"
                 disabled={loadingCategory}
-                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition disabled:opacity-50 flex items-center gap-1"
+                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 flex items-center gap-1 shadow-md cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" /> Agregar
               </button>
             </form>
 
-            <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+            <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
               {categories.map((c) => (
                 <div
                   key={c.id}
-                  className="flex justify-between items-center bg-slate-900/60 p-2 rounded-lg text-xs text-slate-300 border border-slate-700/50"
+                  className="flex justify-between items-center bg-theme-elevated/50 p-2.5 rounded-xl text-xs text-theme-primary border border-theme/60"
                 >
-                  <span>{c.name}</span>
+                  <span className="font-medium">{c.name}</span>
                 </div>
               ))}
             </div>

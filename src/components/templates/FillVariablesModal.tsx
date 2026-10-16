@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Check, Image as ImageIcon, FileText, Sparkles } from 'lucide-react';
 import type { TemplateResponse } from '../../types';
 import { copyImageToClipboard } from '../../utils/clipboardUtils';
+import { extractVariables } from '../../utils/templateUtils';
 
 interface FillVariablesModalProps {
   isOpen: boolean;
@@ -21,11 +22,10 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
   const [isCopied, setIsCopied] = useState(false);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
-  // Extraemos las variables dinámicamente durante el render sin necesidad de useEffect/setState
+  // Extraemos las variables usando extractVariables (soporta {}, [] y ())
   const variablesList = useMemo(() => {
     if (!template) return [];
-    const matches = template.content.match(/\[(.*?)\]/g) || [];
-    return Array.from(new Set(matches.map((v) => v.replace('[', '').replace(']', ''))));
+    return extractVariables(template.content);
   }, [template?.content]);
 
   if (!isOpen || !template) return null;
@@ -35,13 +35,19 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
     onClose();
   };
 
-  // Generar el texto resultante reemplazando las variables
+  // Reemplaza de forma segura cualquier formato de variable: {var}, [var], (var)
   const getFilledContent = () => {
+    if (!template) return '';
     let result = template.content;
+
     variablesList.forEach((varName) => {
-      const val = variableValues[varName] || `[${varName}]`;
-      result = result.replaceAll(`[${varName}]`, val);
+      const value = variableValues[varName];
+      if (value !== undefined && value.trim() !== '') {
+        const regex = new RegExp(`(\\{${varName}\\}|\\[${varName}\\]|\\(${varName}\\))`, 'g');
+        result = result.replace(regex, value);
+      }
     });
+
     return result;
   };
 
@@ -62,8 +68,14 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-theme-surface border border-theme rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-300">
+    <div 
+      onClick={handleCloseModal}
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 cursor-pointer"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-theme-surface border border-theme rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-300 cursor-default"
+      >
         
         {/* Encabezado */}
         <div className="flex justify-between items-center p-5 border-b border-theme/80">

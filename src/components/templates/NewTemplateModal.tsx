@@ -32,7 +32,6 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Procesar archivo de imagen local a Data URL / Base64
   const processFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Por favor selecciona un archivo de imagen válido.');
@@ -95,8 +94,14 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-theme-surface border border-theme rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-300">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 cursor-pointer"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-theme-surface border border-theme rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-300 cursor-default"
+      >
         
         {/* Encabezado */}
         <div className="flex justify-between items-center p-5 border-b border-theme/80">
@@ -178,7 +183,6 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
                 <ImageIcon className="w-3.5 h-3.5 text-theme-accent" /> Imagen Adjunta (Opcional)
               </label>
 
-              {/* Selector Modo Subida: Archivo vs URL */}
               <div className="flex gap-1 p-0.5 bg-theme-elevated border border-theme rounded-lg text-[11px]">
                 <button
                   type="button"
@@ -205,7 +209,6 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
               </div>
             </div>
 
-            {/* Si ya hay imagen, mostrar vista previa con opción de eliminar */}
             {imageUrl ? (
               <div className="relative border border-theme rounded-xl p-2 bg-theme-elevated/40 flex items-center gap-3">
                 <img src={imageUrl} alt="Preview" className="w-16 h-16 object-cover rounded-lg border border-theme" />
@@ -223,7 +226,6 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
                 </button>
               </div>
             ) : uploadMode === 'file' ? (
-              /* Dropzone para Arrastrar o Subir Archivo */
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -253,7 +255,6 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
                 </div>
               </div>
             ) : (
-              /* Input de URL */
               <div className="relative">
                 <Link className="w-4 h-4 text-theme-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
