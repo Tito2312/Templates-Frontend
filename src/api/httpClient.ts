@@ -2,7 +2,7 @@ import axios from 'axios';
 import { session } from '../utils/session';
 
 export const httpClient = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
 });
 
 httpClient.interceptors.request.use(
