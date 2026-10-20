@@ -22,7 +22,7 @@ export const useTemplates = () => {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Cargar metadatos (Marcas y Categorías)
+  // Función auxiliar para cargar metadatos desde acciones manuales
   const fetchMetadata = useCallback(async () => {
     if (!session.getUser()) return;
     try {
@@ -37,7 +37,7 @@ export const useTemplates = () => {
     }
   }, []);
 
-  // Cargar plantillas paginadas
+  // Función auxiliar para cargar plantillas desde acciones manuales
   const fetchTemplates = useCallback(async () => {
     if (!session.getUser()) return;
     setLoading(true);
@@ -53,7 +53,7 @@ export const useTemplates = () => {
     }
   }, [query, selectedBrand, selectedCategory, page]);
 
-  // Refrescar metadatos y plantillas tras un cambio
+  // Refrescar metadatos y plantillas tras una acción estructural
   const refreshAll = useCallback(async () => {
     await Promise.all([fetchMetadata(), fetchTemplates()]);
   }, [fetchMetadata, fetchTemplates]);
@@ -86,89 +86,167 @@ export const useTemplates = () => {
     setPage(0);
   };
 
-  // Efecto único de sincronización con la API
+  // 1. Carga inicial de metadatos (Marcas y Categorías) al montar
   useEffect(() => {
-    let isActive = true;
-    const user = session.getUser();
+    let ignore = false;
 
-    if (!user) return;
+    if (!session.getUser()) return;
 
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const [brandsData, categoriesData, templatesData] = await Promise.all([
-          brandApi.getBrands(),
-          categoryApi.getCategories(),
-          templateApi.searchTemplates(query, selectedBrand, selectedCategory, page, 9),
-        ]);
-
-        if (isActive) {
+    Promise.all([
+      brandApi.getBrands(),
+      categoryApi.getCategories(),
+    ])
+      .then(([brandsData, categoriesData]) => {
+        if (!ignore) {
           setBrands(brandsData);
           setCategories(categoriesData);
-          setTemplates(templatesData.content);
-          setTotalPages(templatesData.totalPages);
-          setTotalElements(templatesData.totalElements);
         }
-      } catch (err) {
-        console.error('Error al consultar datos', err);
-      } finally {
-        if (isActive) {
-          setLoading(false);
+      })
+      .catch((err) => {
+        if (!ignore) {
+          console.error('Error al cargar marcas/categorías', err);
         }
-      }
-    };
-
-    loadData();
+      });
 
     return () => {
-      isActive = false;
+      ignore = true;
+    };
+  }, []);
+
+  // 2. Carga dinámica de plantillas al cambiar filtros o paginación
+useEffect(() => {
+    let ignore = false;
+
+    if (!session.getUser()) return;
+
+    // Se difiere la actualización de estado para evitar la ejecución sincrónica en el efecto
+    queueMicrotask(() => {
+      if (!ignore) {
+        setLoading(true);
+      }
+    });
+
+    templateApi
+      .searchTemplates(query, selectedBrand, selectedCategory, page, 9)
+      .then((data) => {
+        if (!ignore) {
+          setTemplates(data.content);
+          setTotalPages(data.totalPages);
+          setTotalElements(data.totalElements);
+        }
+      })
+      .catch((err) => {
+        if (!ignore) {
+          console.error('Error al consultar plantillas', err);
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
     };
   }, [query, selectedBrand, selectedCategory, page]);
 
   // Acciones
-  const handleCopy = async (template: TemplateResponse) => {
+ const handleCopy = async (template: TemplateResponse) => {
+    // 1. Copia al portapapeles y actualización optimista de UI
     try {
       await navigator.clipboard.writeText(template.content);
-      await templateApi.incrementUsage(template.id);
       setCopiedId(template.id);
       setTimeout(() => setCopiedId(null), 2000);
-      fetchTemplates();
+
+      // Incremento optimista en la lista local
+      setTemplates((prev) =>
+        prev.map((t) =>
+          t.id === template.id
+            ? { ...t, usageCount: (t.usageCount || 0) + 1 }
+            : t
+        )
+      );
+
+      // 2. Notificación en segundo plano al backend
+      await templateApi.incrementUsage(template.id);
     } catch (err) {
       console.error('Error al copiar', err);
     }
   };
 
-  const handleCopyFormatted = async (templateId: number, formattedContent: string) => {
+const handleCopyFormatted = async (templateId: number, formattedContent: string) => {
     try {
       await navigator.clipboard.writeText(formattedContent);
-      await templateApi.incrementUsage(templateId);
       setCopiedId(templateId);
       setTimeout(() => setCopiedId(null), 2000);
-      fetchTemplates();
+
+      // Incremento optimista en la lista local
+      setTemplates((prev) =>
+        prev.map((t) =>
+          t.id === templateId
+            ? { ...t, usageCount: (t.usageCount || 0) + 1 }
+            : t
+        )
+      );
+
+      await templateApi.incrementUsage(templateId);
     } catch (err) {
       console.error('Error al copiar texto formateado', err);
     }
   };
 
-  const handleDelete = async (id: number) => {
+const handleDelete = async (id: number) => {
+    // 1. Guardar copia del estado previo para rollback
+    const previousTemplates = [...templates];
+
+    // 2. Eliminación optimista inmediata en la UI
+    setTemplates((prev) => prev.filter((t) => t.id !== id));
+
     try {
+      // 3. Ejecutar petición en segundo plano
       await templateApi.deleteTemplate(id);
-      await fetchTemplates();
     } catch (err) {
-      console.error('Error al eliminar', err);
+      console.error('Error al eliminar plantilla', err);
+      // 4. Rollback: Restaurar la lista original si la API falla
+      setTemplates(previousTemplates);
+      throw err;
     }
   };
 
-  const handleCreate = async (payload: TemplateRequest) => {
+const handleCreate = async (payload: TemplateRequest) => {
     if (!session.getUser()) return;
     await templateApi.createTemplate(payload);
     await fetchTemplates();
-  };
+  };;
 
-  const handleUpdate = async (id: number, payload: TemplateRequest) => {
+const handleUpdate = async (id: number, payload: TemplateRequest) => {
     if (!session.getUser()) return;
-    await templateApi.updateTemplate(id, payload);
-    await fetchTemplates();
+
+    // 1. Guardar copia previa para rollback
+    const previousTemplates = [...templates];
+
+    // 2. Actualización optimista aplicando las propiedades del payload
+    setTemplates((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              ...payload,
+            }
+          : t
+      )
+    );
+
+    try {
+      // 3. Petición al backend
+      await templateApi.updateTemplate(id, payload);
+    } catch (err) {
+      console.error('Error al actualizar plantilla', err);
+      // 4. Rollback en caso de error
+      setTemplates(previousTemplates);
+      throw err;
+    }
   };
 
   return {
