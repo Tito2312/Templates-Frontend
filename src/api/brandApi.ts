@@ -12,6 +12,11 @@ export const brandApi = {
     return data;
   },
 
+  updateBrand: async (id: number, name: string, colorHex?: string) => {
+    const response = await httpClient.put(`/brands/${id}`, { name, colorHex });
+    return response.data;
+  },
+
   deleteBrand: async (id: number): Promise<void> => {
     await httpClient.delete(`/brands/${id}`);
   },

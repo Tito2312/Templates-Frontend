@@ -12,6 +12,11 @@ export const categoryApi = {
     return data;
   },
 
+  updateCategory: async (id: number, name: string) => {
+    const response = await httpClient.put(`/categories/${id}`, { name });
+    return response.data;
+  },
+
   deleteCategory: async (id: number): Promise<void> => {
     await httpClient.delete(`/categories/${id}`);
   },

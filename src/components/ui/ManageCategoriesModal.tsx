@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Tag, Briefcase } from 'lucide-react';
+import { X, Plus, Tag, Briefcase, Pencil, Check } from 'lucide-react';
 import { brandApi } from '../../api/brandApi';
 import { categoryApi } from '../../api/categoryApi';
 import type { Brand, Category } from '../../types';
@@ -22,6 +22,15 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
   const [categoryName, setCategoryName] = useState('');
   const [loadingBrand, setLoadingBrand] = useState(false);
   const [loadingCategory, setLoadingCategory] = useState(false);
+
+  // Estados para la edición de marcas
+  const [editingBrandId, setEditingBrandId] = useState<number | null>(null);
+  const [editBrandName, setEditBrandName] = useState('');
+  const [editBrandColor, setEditBrandColor] = useState('#6366f1');
+
+  // Estados para la edición de categorías
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -95,6 +104,60 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
     }
   };
 
+  // Handlers para Edición de Marcas
+  const handleStartEditBrand = (brand: Brand) => {
+    setEditingBrandId(brand.id);
+    setEditBrandName(brand.name);
+    setEditBrandColor(brand.colorHex || '#6366f1');
+  };
+
+  const handleCancelEditBrand = () => {
+    setEditingBrandId(null);
+    setEditBrandName('');
+    setEditBrandColor('#6366f1');
+  };
+
+  const handleSaveEditBrand = async (id: number) => {
+    if (!editBrandName.trim()) return;
+    setLoadingBrand(true);
+    try {
+      await brandApi.updateBrand(id, editBrandName.trim(), editBrandColor);
+      setEditingBrandId(null);
+      await reloadData();
+      onRefresh();
+    } catch (err) {
+      console.error('Error al actualizar marca', err);
+    } finally {
+      setLoadingBrand(false);
+    }
+  };
+
+  // Handlers para Edición de Categorías
+  const handleStartEditCategory = (category: Category) => {
+    setEditingCategoryId(category.id);
+    setEditCategoryName(category.name);
+  };
+
+  const handleCancelEditCategory = () => {
+    setEditingCategoryId(null);
+    setEditCategoryName('');
+  };
+
+  const handleSaveEditCategory = async (id: number) => {
+    if (!editCategoryName.trim()) return;
+    setLoadingCategory(true);
+    try {
+      await categoryApi.updateCategory(id, editCategoryName.trim());
+      setEditingCategoryId(null);
+      await reloadData();
+      onRefresh();
+    } catch (err) {
+      console.error('Error al actualizar categoría', err);
+    } finally {
+      setLoadingCategory(false);
+    }
+  };
+
   return (
     <div
       onClick={onClose}
@@ -159,15 +222,61 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                   key={b.id}
                   className="flex justify-between items-center bg-theme-elevated/50 p-2.5 rounded-xl text-xs text-theme-primary border border-theme/60"
                 >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm shrink-0"
-                      style={{ backgroundColor: b.colorHex || '#6366f1' }}
-                    />
-                    <span className="font-medium">{b.name}</span>
-                  </div>
-                  {b.colorHex && (
-                    <span className="text-[10px] font-mono text-theme-muted">{b.colorHex}</span>
+                  {editingBrandId === b.id ? (
+                    <div className="flex items-center gap-2 w-full">
+                      <input
+                        type="text"
+                        value={editBrandName}
+                        onChange={(e) => setEditBrandName(e.target.value)}
+                        className="flex-1 p-1 bg-theme-elevated border border-theme rounded-lg text-xs text-theme-primary focus:outline-none focus:ring-1 focus:ring-theme-accent"
+                      />
+                      <input
+                        type="color"
+                        value={editBrandColor}
+                        onChange={(e) => setEditBrandColor(e.target.value)}
+                        className="w-5 h-5 bg-transparent rounded cursor-pointer border-0 shrink-0"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEditBrand(b.id)}
+                        disabled={loadingBrand}
+                        className="p-1.5 text-emerald-400 hover:text-emerald-300 rounded-lg hover:bg-theme-elevated transition"
+                        title="Guardar"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelEditBrand}
+                        className="p-1.5 text-theme-muted hover:text-theme-primary rounded-lg hover:bg-theme-elevated transition"
+                        title="Cancelar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm shrink-0"
+                          style={{ backgroundColor: b.colorHex || '#6366f1' }}
+                        />
+                        <span className="font-medium">{b.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {b.colorHex && (
+                          <span className="text-[10px] font-mono text-theme-muted">{b.colorHex}</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditBrand(b)}
+                          className="text-theme-muted hover:text-theme-primary p-1 rounded hover:bg-theme-elevated transition cursor-pointer"
+                          title="Editar marca"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               ))}
@@ -202,7 +311,45 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                   key={c.id}
                   className="flex justify-between items-center bg-theme-elevated/50 p-2.5 rounded-xl text-xs text-theme-primary border border-theme/60"
                 >
-                  <span className="font-medium">{c.name}</span>
+                  {editingCategoryId === c.id ? (
+                    <div className="flex items-center gap-2 w-full">
+                      <input
+                        type="text"
+                        value={editCategoryName}
+                        onChange={(e) => setEditCategoryName(e.target.value)}
+                        className="flex-1 p-1 bg-theme-elevated border border-theme rounded-lg text-xs text-theme-primary focus:outline-none focus:ring-1 focus:ring-theme-accent"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEditCategory(c.id)}
+                        disabled={loadingCategory}
+                        className="p-1.5 text-emerald-400 hover:text-emerald-300 rounded-lg hover:bg-theme-elevated transition"
+                        title="Guardar"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelEditCategory}
+                        className="p-1.5 text-theme-muted hover:text-theme-primary rounded-lg hover:bg-theme-elevated transition"
+                        title="Cancelar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="font-medium">{c.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditCategory(c)}
+                        className="text-theme-muted hover:text-theme-primary p-1 rounded hover:bg-theme-elevated transition cursor-pointer"
+                        title="Editar categoría"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
