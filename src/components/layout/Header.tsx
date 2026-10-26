@@ -1,12 +1,11 @@
 import React from 'react';
-import { Plus, FolderCog, LogIn, LogOut, User as UserIcon, Sparkles } from 'lucide-react';
+import { Plus, FolderCog, LogOut, User as UserIcon, Sparkles } from 'lucide-react';
 import type { User } from '../../types';
 
 interface HeaderProps {
   currentUser: User | null;
   onOpenModal: () => void;
   onOpenCategoriesModal: () => void;
-  onOpenAuthModal: () => void;
   onLogout: () => void;
   themeColor?: string;
 }
@@ -15,7 +14,6 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   onOpenModal,
   onOpenCategoriesModal,
-  onOpenAuthModal,
   onLogout,
 }) => {
   return (
@@ -80,16 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               </div>
             </>
-          ) : (
-            <button
-              type="button"
-              onClick={onOpenAuthModal}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-theme-elevated hover:bg-theme-elevated/80 text-theme-primary border border-theme transition flex items-center gap-2 shadow-sm cursor-pointer"
-            >
-              <LogIn className="w-4 h-4 text-theme-accent" />
-              <span>Iniciar Sesión</span>
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
     </header>

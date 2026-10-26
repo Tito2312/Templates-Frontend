@@ -1,7 +1,19 @@
+export type Role = 'ROLE_ADMIN' | 'ROLE_USER';
+
 export interface User {
   id: number;
   username: string;
   email: string;
+  role: Role;
+}
+
+// Formato de error que devuelve el backend (GlobalExceptionHandler / SecurityErrorHandler)
+export interface ApiError {
+  timestamp: string;
+  status: number;
+  error: string;
+  message: string;
+  path: string;
 }
 
 export interface Brand {
