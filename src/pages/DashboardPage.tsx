@@ -84,20 +84,21 @@ export default function DashboardPage() {
     setIsTemplateModalOpen(true);
   };
 
+  const handleCloseTemplateModal = () => {
+    setIsTemplateModalOpen(false);
+    setEditingTemplate(null);
+  };
+
+  // Si el guardado falla, el error se relanza: el modal sigue abierto y lo muestra sin perder lo escrito
   const handleSubmitTemplate = async (data: TemplateRequest) => {
-    try {
-      if (editingTemplate) {
-        await handleUpdate(editingTemplate.id, data);
-        showToast('Plantilla actualizada con éxito', 'success');
-      } else {
-        await handleCreate(data);
-        showToast('Plantilla creada con éxito', 'success');
-      }
-      setIsTemplateModalOpen(false);
-      setEditingTemplate(null);
-    } catch (err) {
-      showToast(getApiErrorMessage(err, 'Error al guardar la plantilla'), 'error');
+    if (editingTemplate) {
+      await handleUpdate(editingTemplate.id, data);
+      showToast('Plantilla actualizada con éxito', 'success');
+    } else {
+      await handleCreate(data);
+      showToast('Plantilla creada con éxito', 'success');
     }
+    handleCloseTemplateModal();
   };
 
   const handleConfirmDelete = async () => {
@@ -119,9 +120,26 @@ export default function DashboardPage() {
     if (vars.length > 0) {
       setVariableTemplate(template);
     } else {
-      await handleCopy(template);
-      showToast('¡Texto copiado al portapapeles!', 'success');
+      const copied = await handleCopy(template);
+      if (copied) {
+        showToast('¡Texto copiado al portapapeles!', 'success');
+      } else {
+        showToast('No se pudo copiar al portapapeles', 'error');
+      }
     }
+  };
+
+  // Copia desde el modal de variables: solo se cierra si la copia funcionó
+  const handleCopyFilledText = async (formattedText: string) => {
+    if (!variableTemplate) return false;
+    const copied = await handleCopyFormatted(variableTemplate.id, formattedText);
+    if (copied) {
+      showToast('¡Texto formateado copiado!', 'success');
+      setVariableTemplate(null);
+    } else {
+      showToast('No se pudo copiar al portapapeles', 'error');
+    }
+    return copied;
   };
 
   // 1. Obtener la marca seleccionada y calcular su paleta armónica
@@ -219,40 +237,38 @@ export default function DashboardPage() {
         </main>
       </div>
 
-      {/* Modales */}
-      <NewTemplateModal
-        key={editingTemplate ? `edit-${editingTemplate.id}` : 'new-template'}
-        isOpen={isTemplateModalOpen}
-        brands={brands}
-        categories={categories}
-        templateToEdit={editingTemplate}
-        onClose={() => {
-          setIsTemplateModalOpen(false);
-          setEditingTemplate(null);
-        }}
-        onSubmit={handleSubmitTemplate}
-      />
+      {/* Modales: se montan solo mientras están abiertos, así cada apertura empieza con el estado limpio */}
+      {isTemplateModalOpen && (
+        <NewTemplateModal
+          key={editingTemplate ? `edit-${editingTemplate.id}` : 'new-template'}
+          isOpen
+          brands={brands}
+          categories={categories}
+          templateToEdit={editingTemplate}
+          onClose={handleCloseTemplateModal}
+          onSubmit={handleSubmitTemplate}
+        />
+      )}
 
-      <ManageCategoriesModal
-        isOpen={isCategoriesModalOpen}
-        onClose={() => setIsCategoriesModalOpen(false)}
-        onRefresh={refreshTemplates}
-        onNotify={showToast}
-      />
+      {isCategoriesModalOpen && (
+        <ManageCategoriesModal
+          isOpen
+          onClose={() => setIsCategoriesModalOpen(false)}
+          onRefresh={refreshTemplates}
+          onNotify={showToast}
+        />
+      )}
 
-      <FillVariablesModal
-        isOpen={variableTemplate !== null}
-        template={variableTemplate}
-        onClose={() => setVariableTemplate(null)}
-        onCopyFilledText={async (formattedText: string) => {
-          if (variableTemplate) {
-            await handleCopyFormatted(variableTemplate.id, formattedText);
-            showToast('¡Texto formateado copiado!', 'success');
-            setVariableTemplate(null);
-          }
-        }}
-        themeColor={currentPalette.primary}
-      />
+      {variableTemplate && (
+        <FillVariablesModal
+          key={variableTemplate.id}
+          isOpen
+          template={variableTemplate}
+          onClose={() => setVariableTemplate(null)}
+          onCopyFilledText={handleCopyFilledText}
+          themeColor={currentPalette.primary}
+        />
+      )}
 
       <ConfirmModal
         isOpen={deletingTemplateId !== null}

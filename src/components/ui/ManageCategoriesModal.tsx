@@ -234,15 +234,10 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
     </div>
   );
 
+  // Solo se cierra con la X, nunca con clic fuera ni con Escape
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 cursor-pointer"
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="bg-theme-surface border border-theme rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-6 cursor-default transition-colors duration-300"
-      >
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-theme-surface border border-theme rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-6 transition-colors duration-300">
         {/* Encabezado */}
         <div className="flex justify-between items-center border-b border-theme/80 pb-3">
           <h2 className="text-lg font-bold text-theme-primary flex items-center gap-2">
@@ -469,17 +464,16 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
         </div>
       </div>
 
-      {/* Confirmación de eliminación, por encima de este modal (sus clics no cierran el modal de gestión) */}
-      <div onClick={(e) => e.stopPropagation()} className="cursor-default">
-        <ConfirmModal
-          isOpen={pendingDelete !== null}
-          title={pendingDelete?.kind === 'brand' ? '¿Eliminar marca?' : '¿Eliminar categoría?'}
-          message={deleteMessage(pendingDelete)}
-          isLoading={isDeletingItem}
-          onConfirm={handleConfirmDeleteItem}
-          onCancel={() => setPendingDelete(null)}
-        />
-      </div>
+      {/* Confirmación de eliminación, por encima de este modal */}
+      <ConfirmModal
+        isOpen={pendingDelete !== null}
+        title={pendingDelete?.kind === 'brand' ? '¿Eliminar marca?' : '¿Eliminar categoría?'}
+        message={deleteMessage(pendingDelete)}
+        isLoading={isDeletingItem}
+        onConfirm={handleConfirmDeleteItem}
+        onCancel={() => setPendingDelete(null)}
+      />
+
     </div>
   );
 };

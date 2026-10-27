@@ -8,7 +8,8 @@ interface FillVariablesModalProps {
   isOpen: boolean;
   template: TemplateResponse | null;
   onClose: () => void;
-  onCopyFilledText: (filledText: string) => void;
+  // Devuelve si la copia al portapapeles funcionó
+  onCopyFilledText: (filledText: string) => Promise<boolean>;
   themeColor?: string;
 }
 
@@ -26,7 +27,7 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
   const variablesList = useMemo(() => {
     if (!template) return [];
     return extractVariables(template.content);
-  }, [template?.content]);
+  }, [template]);
 
   if (!isOpen || !template) return null;
 
@@ -51,9 +52,10 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
     return result;
   };
 
-  const handleCopyText = () => {
+  const handleCopyText = async () => {
     const textToCopy = getFilledContent();
-    onCopyFilledText(textToCopy);
+    // Solo se marca como copiado si el portapapeles lo permitió
+    if (!(await onCopyFilledText(textToCopy))) return;
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
@@ -67,15 +69,10 @@ export const FillVariablesModal: React.FC<FillVariablesModalProps> = ({
     }
   };
 
+  // Solo se cierra con los botones explícitos (X / Cerrar), nunca con clic fuera ni con Escape
   return (
-    <div 
-      onClick={handleCloseModal}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 cursor-pointer"
-    >
-      <div 
-        onClick={(e) => e.stopPropagation()}
-        className="bg-theme-surface border border-theme rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-300 cursor-default"
-      >
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-theme-surface border border-theme rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-300">
         
         {/* Encabezado */}
         <div className="flex justify-between items-center p-5 border-b border-theme/80">

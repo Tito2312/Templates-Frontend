@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { X, Plus, Save, Image as ImageIcon, Briefcase, Tag, FileText, Upload, Link, Trash2 } from 'lucide-react';
+import { X, Plus, Save, Image as ImageIcon, Briefcase, Tag, FileText, Upload, Link, Trash2, AlertCircle } from 'lucide-react';
 import type { Brand, Category, TemplateRequest, TemplateResponse } from '../../types';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 interface NewTemplateModalProps {
   isOpen: boolean;
@@ -27,6 +28,8 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
   const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Error visible dentro del modal (guardado fallido o archivo inválido)
+  const [error, setError] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -34,9 +37,10 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
 
   const processFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Por favor selecciona un archivo de imagen válido.');
+      setError('Por favor selecciona un archivo de imagen válido.');
       return;
     }
+    setError('');
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
@@ -77,7 +81,9 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
     if (!title.trim() || !content.trim()) return;
 
     setIsSubmitting(true);
+    setError('');
     try {
+      // Si el guardado va bien, el dashboard cierra el modal; si falla, se queda abierto con lo escrito
       await onSubmit({
         title: title.trim(),
         content: content.trim(),
@@ -85,23 +91,18 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
         categoryId: categoryId ? Number(categoryId) : undefined,
         imageUrl: imageUrl.trim() || undefined,
       });
-      onClose();
-    } catch (error) {
-      console.error('Error enviando plantilla:', error);
+    } catch (err) {
+      console.error('Error enviando plantilla:', err);
+      setError(getApiErrorMessage(err, 'No se pudo guardar la plantilla. Inténtalo de nuevo.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Solo se cierra con los botones explícitos (X / Cancelar), nunca con clic fuera ni con Escape
   return (
-    <div 
-      onClick={onClose}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 cursor-pointer"
-    >
-      <div 
-        onClick={(e) => e.stopPropagation()}
-        className="bg-theme-surface border border-theme rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-300 cursor-default"
-      >
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-theme-surface border border-theme rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-300">
         
         {/* Encabezado */}
         <div className="flex justify-between items-center p-5 border-b border-theme/80">
@@ -116,7 +117,8 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-theme-muted hover:text-theme-primary transition cursor-pointer"
+            disabled={isSubmitting}
+            className="text-theme-muted hover:text-theme-primary transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="w-5 h-5" />
           </button>
@@ -124,12 +126,23 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
 
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4">
+          {error && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 bg-red-500/10 border border-red-500/40 text-red-400 p-2.5 rounded-xl text-xs"
+            >
+              <AlertCircle className="w-4 h-4 shrink-0 mt-px" />
+              <span>{error}</span>
+            </div>
+          )}
+
           {/* Título */}
           <div className="space-y-1">
             <label className="text-xs font-semibold text-theme-muted">Título de la Plantilla *</label>
             <input
               type="text"
               required
+              maxLength={150}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ej: Saludo Inicial Clientes..."
@@ -288,7 +301,8 @@ export const NewTemplateModal: React.FC<NewTemplateModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-theme-muted hover:text-theme-primary transition cursor-pointer"
+              disabled={isSubmitting}
+              className="px-4 py-2 text-xs font-semibold text-theme-muted hover:text-theme-primary transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>

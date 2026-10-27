@@ -143,49 +143,42 @@ useEffect(() => {
   }, [query, selectedBrand, selectedCategory, page]);
 
   // Acciones
- const handleCopy = async (template: TemplateResponse) => {
-    // 1. Copia al portapapeles y actualización optimista de UI
+  /**
+   * Copia el texto al portapapeles y registra el uso.
+   * Devuelve false si el navegador no permitió copiar (no se cuenta el uso en ese caso).
+   */
+  const copyAndCountUsage = async (templateId: number, text: string): Promise<boolean> => {
+    // 1. Copia al portapapeles
     try {
-      await navigator.clipboard.writeText(template.content);
-      setCopiedId(template.id);
-      setTimeout(() => setCopiedId(null), 2000);
-
-      // Incremento optimista en la lista local
-      setTemplates((prev) =>
-        prev.map((t) =>
-          t.id === template.id
-            ? { ...t, usageCount: (t.usageCount || 0) + 1 }
-            : t
-        )
-      );
-
-      // 2. Notificación en segundo plano al backend
-      await templateApi.incrementUsage(template.id);
+      await navigator.clipboard.writeText(text);
     } catch (err) {
       console.error('Error al copiar', err);
+      return false;
     }
+
+    setCopiedId(templateId);
+    setTimeout(() => setCopiedId(null), 2000);
+
+    // 2. Incremento optimista en la lista local
+    setTemplates((prev) =>
+      prev.map((t) =>
+        t.id === templateId
+          ? { ...t, usageCount: (t.usageCount || 0) + 1 }
+          : t
+      )
+    );
+
+    // 3. Notificación en segundo plano al backend (si falla, el texto ya se copió)
+    templateApi.incrementUsage(templateId).catch((err) => {
+      console.error('Error al registrar el uso de la plantilla', err);
+    });
+    return true;
   };
 
-const handleCopyFormatted = async (templateId: number, formattedContent: string) => {
-    try {
-      await navigator.clipboard.writeText(formattedContent);
-      setCopiedId(templateId);
-      setTimeout(() => setCopiedId(null), 2000);
+  const handleCopy = (template: TemplateResponse) => copyAndCountUsage(template.id, template.content);
 
-      // Incremento optimista en la lista local
-      setTemplates((prev) =>
-        prev.map((t) =>
-          t.id === templateId
-            ? { ...t, usageCount: (t.usageCount || 0) + 1 }
-            : t
-        )
-      );
-
-      await templateApi.incrementUsage(templateId);
-    } catch (err) {
-      console.error('Error al copiar texto formateado', err);
-    }
-  };
+  const handleCopyFormatted = (templateId: number, formattedContent: string) =>
+    copyAndCountUsage(templateId, formattedContent);
 
 const handleDelete = async (id: number) => {
     // 1. Guardar copia del estado previo para rollback
