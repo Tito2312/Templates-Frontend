@@ -4,6 +4,8 @@ import type { User } from '../../types';
 
 interface HeaderProps {
   currentUser: User | null;
+  // Solo los administradores ven las acciones de escritura del catálogo
+  isAdmin: boolean;
   onOpenModal: () => void;
   onOpenCategoriesModal: () => void;
   onLogout: () => void;
@@ -12,6 +14,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   currentUser,
+  isAdmin,
   onOpenModal,
   onOpenCategoriesModal,
   onLogout,
@@ -39,26 +42,30 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2 sm:gap-3">
           {currentUser ? (
             <>
-              {/* Botón Administrar Categorías */}
-              <button
-                type="button"
-                onClick={onOpenCategoriesModal}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-theme-elevated hover:bg-theme-elevated/80 text-theme-primary border border-theme transition flex items-center gap-2 cursor-pointer shadow-sm"
-                title="Administrar Categorías"
-              >
-                <FolderCog className="w-4 h-4 text-theme-accent" />
-                <span className="hidden sm:inline">Categorías</span>
-              </button>
+              {isAdmin && (
+                <>
+                  {/* Botón Administrar Categorías */}
+                  <button
+                    type="button"
+                    onClick={onOpenCategoriesModal}
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-theme-elevated hover:bg-theme-elevated/80 text-theme-primary border border-theme transition flex items-center gap-2 cursor-pointer shadow-sm"
+                    title="Administrar Categorías"
+                  >
+                    <FolderCog className="w-4 h-4 text-theme-accent" />
+                    <span className="hidden sm:inline">Categorías</span>
+                  </button>
 
-              {/* Botón Nueva Plantilla */}
-              <button
-                type="button"
-                onClick={onOpenModal}
-                className="btn-theme-primary px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-md hover:brightness-110 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Nueva Plantilla</span>
-              </button>
+                  {/* Botón Nueva Plantilla */}
+                  <button
+                    type="button"
+                    onClick={onOpenModal}
+                    className="btn-theme-primary px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-md hover:brightness-110 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Nueva Plantilla</span>
+                  </button>
+                </>
+              )}
 
               {/* Indicador de Usuario + Logout */}
               <div className="flex items-center gap-1.5 pl-2 border-l border-theme/80">

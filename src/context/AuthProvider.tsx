@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { userApi } from '../api/userApi';
 import { setUnauthorizedHandler } from '../api/httpClient';
 import { session } from '../utils/session';
+import { flash } from '../utils/flash';
 import { AuthContext, type AuthContextValue, type AuthStatus } from './authContext';
 import type { User } from '../types';
 
@@ -56,6 +57,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = useCallback(async (email: string, password: string) => {
     const loggedUser = await userApi.login(email, password);
+    // Antes de cambiar de estado: el dashboard lo muestra al montarse
+    flash.set(`¡Bienvenido de nuevo, ${loggedUser.username}!`);
     setUser(loggedUser);
     setSessionExpired(false);
     setStatus('authenticated');
@@ -64,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = useCallback(async (username: string, email: string, password: string) => {
     const newUser = await userApi.register(username, email, password);
+    flash.set(`¡Bienvenido, ${newUser.username}!`);
     setUser(newUser);
     setSessionExpired(false);
     setStatus('authenticated');

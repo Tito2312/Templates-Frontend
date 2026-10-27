@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { AuthForm, type AuthMode } from '../components/auth/AuthForm';
 import { WelcomePanel } from '../components/home/WelcomePanel';
+import { ToastContainer } from '../components/ui/Toast';
+import { useToast } from '../hooks/useToast';
+import { flash } from '../utils/flash';
 import { useAuth } from '../context/authContext';
 import { generateThemeFromHex } from '../utils/themeGenerator';
 import { paletteToStyle } from '../utils/themeStyle';
@@ -18,12 +21,20 @@ export default function HomePage() {
   const { sessionExpired } = useAuth();
   const [mode, setMode] = useState<AuthMode>('login');
 
+  // Aviso pendiente de la vista anterior (p. ej. "Sesión cerrada correctamente")
+  const { toasts, removeToast } = useToast(flash.peek);
+  useEffect(() => {
+    flash.clear();
+  }, []);
+
   return (
     <div
       className="home min-h-screen bg-theme-base text-theme-primary font-sans relative overflow-hidden flex flex-col md:block"
       data-mode={mode}
       style={paletteToStyle(palette)}
     >
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+
       {/* Línea superior accent, igual que en la vista principal */}
       <div className="absolute top-0 inset-x-0 h-1.5 z-30" style={{ backgroundColor: palette.primary }} />
 

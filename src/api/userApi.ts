@@ -45,9 +45,4 @@ export const userApi = {
     const { data } = await httpClient.get<User>('/users/me');
     return data;
   },
-
-  getUserById: async (id: number): Promise<User> => {
-    const { data } = await httpClient.get<User>(`/users/${id}`);
-    return data;
-  },
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { SearchBar } from '../components/ui/SearchBar';
@@ -16,13 +16,15 @@ import { extractVariables } from '../utils/templateUtils';
 import { useAuth } from '../context/authContext';
 import { generateThemeFromHex } from '../utils/themeGenerator';
 import { paletteToStyle } from '../utils/themeStyle';
+import { getApiErrorMessage } from '../utils/apiError';
+import { flash } from '../utils/flash';
 import type { TemplateResponse, TemplateRequest } from '../types';
 
 /**
  * Vista principal (ruta privada /dashboard): búsqueda, filtros y gestión de plantillas.
  */
 export default function DashboardPage() {
-  const { user: currentUser, logout } = useAuth();
+  const { user: currentUser, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
@@ -35,8 +37,13 @@ export default function DashboardPage() {
   // Estado para el Modal de Variables Dinámicas
   const [variableTemplate, setVariableTemplate] = useState<TemplateResponse | null>(null);
 
-  // Hook de Notificaciones Flotantes
-  const { toasts, showToast, removeToast } = useToast();
+  // Hook de Notificaciones Flotantes (arranca con el aviso pendiente, p. ej. "Bienvenido")
+  const { toasts, showToast, removeToast } = useToast(flash.peek);
+
+  // El aviso pendiente ya se mostró: se consume para que no reaparezca al recargar
+  useEffect(() => {
+    flash.clear();
+  }, []);
 
   const {
     templates,
@@ -62,6 +69,7 @@ export default function DashboardPage() {
   } = useTemplates();
 
   const handleLogout = () => {
+    flash.set('Sesión cerrada correctamente', 'info');
     logout();
     navigate('/', { replace: true });
   };
@@ -87,8 +95,8 @@ export default function DashboardPage() {
       }
       setIsTemplateModalOpen(false);
       setEditingTemplate(null);
-    } catch {
-      showToast('Error al guardar la plantilla', 'error');
+    } catch (err) {
+      showToast(getApiErrorMessage(err, 'Error al guardar la plantilla'), 'error');
     }
   };
 
@@ -98,8 +106,8 @@ export default function DashboardPage() {
     try {
       await handleDelete(deletingTemplateId);
       showToast('Plantilla eliminada correctamente', 'success');
-    } catch {
-      showToast('Error al eliminar la plantilla', 'error');
+    } catch (err) {
+      showToast(getApiErrorMessage(err, 'Error al eliminar la plantilla'), 'error');
     } finally {
       setIsDeleting(false);
       setDeletingTemplateId(null);
@@ -148,6 +156,7 @@ export default function DashboardPage() {
       <div className="relative z-10 flex flex-col flex-1">
         <Header
           currentUser={currentUser}
+          isAdmin={isAdmin}
           onOpenModal={handleOpenCreateModal}
           onOpenCategoriesModal={() => setIsCategoriesModalOpen(true)}
           onLogout={handleLogout}
@@ -195,8 +204,8 @@ export default function DashboardPage() {
                 templates={templates}
                 copiedId={copiedId}
                 onCopy={handleCopyClick}
-                onDelete={(id) => setDeletingTemplateId(id)}
-                onEdit={handleOpenEditModal}
+                onDelete={isAdmin ? (id) => setDeletingTemplateId(id) : undefined}
+                onEdit={isAdmin ? handleOpenEditModal : undefined}
                 themeColor={currentPalette.primary}
               />
 
@@ -228,6 +237,7 @@ export default function DashboardPage() {
         isOpen={isCategoriesModalOpen}
         onClose={() => setIsCategoriesModalOpen(false)}
         onRefresh={refreshTemplates}
+        onNotify={showToast}
       />
 
       <FillVariablesModal

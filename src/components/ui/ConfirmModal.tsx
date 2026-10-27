@@ -6,6 +6,8 @@ interface ConfirmModalProps {
   title: string;
   message: string;
   isLoading?: boolean;
+  // Texto del botón de confirmación (por defecto "Eliminar")
+  confirmLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -15,13 +17,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   title,
   message,
   isLoading = false,
+  confirmLabel = 'Eliminar',
   onConfirm,
   onCancel,
 }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
       <div className="bg-theme-surface border border-theme rounded-2xl w-full max-w-sm shadow-2xl p-6 transition-colors duration-300">
         
         <div className="flex items-center gap-3 mb-4">
@@ -55,7 +58,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 <span>Eliminando...</span>
               </>
             ) : (
-              'Eliminar'
+              confirmLabel
             )}
           </button>
         </div>

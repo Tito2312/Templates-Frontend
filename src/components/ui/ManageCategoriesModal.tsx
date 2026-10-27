@@ -1,19 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Tag, Briefcase, Pencil, Check } from 'lucide-react';
+import { X, Plus, Tag, Briefcase, Pencil, Check, Trash2, AlertCircle } from 'lucide-react';
 import { brandApi } from '../../api/brandApi';
 import { categoryApi } from '../../api/categoryApi';
+import { ConfirmModal } from './ConfirmModal';
+import { getApiErrorMessage } from '../../utils/apiError';
+import type { ToastType } from './Toast';
 import type { Brand, Category } from '../../types';
 
 interface ManageCategoriesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRefresh: () => void;
+  // Avisos de éxito en el dashboard (toasts)
+  onNotify?: (message: string, type?: ToastType) => void;
 }
+
+type PendingDelete = { kind: 'brand' | 'category'; id: number; name: string };
 
 export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
   isOpen,
   onClose,
   onRefresh,
+  onNotify,
 }) => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -31,6 +39,14 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
   // Estados para la edición de categorías
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
+
+  // Errores visibles por sección (mensaje real del backend: duplicado, validación...)
+  const [brandError, setBrandError] = useState('');
+  const [categoryError, setCategoryError] = useState('');
+
+  // Eliminación pendiente de confirmar
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -79,10 +95,13 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
       await brandApi.createBrand(brandName.trim(), brandColor);
       setBrandName('');
       setBrandColor('#6366f1');
+      setBrandError('');
       await reloadData();
       onRefresh();
+      onNotify?.('Marca creada', 'success');
     } catch (err) {
       console.error('Error al crear marca', err);
+      setBrandError(getApiErrorMessage(err, 'No se pudo crear la marca.'));
     } finally {
       setLoadingBrand(false);
     }
@@ -95,10 +114,13 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
     try {
       await categoryApi.createCategory(categoryName.trim());
       setCategoryName('');
+      setCategoryError('');
       await reloadData();
       onRefresh();
+      onNotify?.('Categoría creada', 'success');
     } catch (err) {
       console.error('Error al crear categoría', err);
+      setCategoryError(getApiErrorMessage(err, 'No se pudo crear la categoría.'));
     } finally {
       setLoadingCategory(false);
     }
@@ -109,12 +131,14 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
     setEditingBrandId(brand.id);
     setEditBrandName(brand.name);
     setEditBrandColor(brand.colorHex || '#6366f1');
+    setBrandError('');
   };
 
   const handleCancelEditBrand = () => {
     setEditingBrandId(null);
     setEditBrandName('');
     setEditBrandColor('#6366f1');
+    setBrandError('');
   };
 
   const handleSaveEditBrand = async (id: number) => {
@@ -123,10 +147,13 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
     try {
       await brandApi.updateBrand(id, editBrandName.trim(), editBrandColor);
       setEditingBrandId(null);
+      setBrandError('');
       await reloadData();
       onRefresh();
+      onNotify?.('Marca actualizada', 'success');
     } catch (err) {
       console.error('Error al actualizar marca', err);
+      setBrandError(getApiErrorMessage(err, 'No se pudo actualizar la marca.'));
     } finally {
       setLoadingBrand(false);
     }
@@ -136,11 +163,13 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
   const handleStartEditCategory = (category: Category) => {
     setEditingCategoryId(category.id);
     setEditCategoryName(category.name);
+    setCategoryError('');
   };
 
   const handleCancelEditCategory = () => {
     setEditingCategoryId(null);
     setEditCategoryName('');
+    setCategoryError('');
   };
 
   const handleSaveEditCategory = async (id: number) => {
@@ -149,14 +178,61 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
     try {
       await categoryApi.updateCategory(id, editCategoryName.trim());
       setEditingCategoryId(null);
+      setCategoryError('');
       await reloadData();
       onRefresh();
+      onNotify?.('Categoría actualizada', 'success');
     } catch (err) {
       console.error('Error al actualizar categoría', err);
+      setCategoryError(getApiErrorMessage(err, 'No se pudo actualizar la categoría.'));
     } finally {
       setLoadingCategory(false);
     }
   };
+
+  // Eliminación confirmada: las plantillas asociadas se conservan y quedan sin marca/categoría
+  const handleConfirmDeleteItem = async () => {
+    if (!pendingDelete) return;
+    const { kind, id } = pendingDelete;
+    const isBrand = kind === 'brand';
+    const setError = isBrand ? setBrandError : setCategoryError;
+
+    setIsDeletingItem(true);
+    try {
+      if (isBrand) {
+        await brandApi.deleteBrand(id);
+      } else {
+        await categoryApi.deleteCategory(id);
+      }
+      setError('');
+      await reloadData();
+      onRefresh();
+      onNotify?.(isBrand ? 'Marca eliminada' : 'Categoría eliminada', 'success');
+    } catch (err) {
+      console.error('Error al eliminar', err);
+      setError(getApiErrorMessage(err, isBrand ? 'No se pudo eliminar la marca.' : 'No se pudo eliminar la categoría.'));
+    } finally {
+      setIsDeletingItem(false);
+      setPendingDelete(null);
+    }
+  };
+
+  const deleteMessage = (item: PendingDelete | null) => {
+    if (!item) return '';
+    return item.kind === 'brand'
+      ? `¿Eliminar la marca «${item.name}»? Las plantillas que la usan no se eliminan: quedarán sin marca y seguirán visibles en «Todas las marcas».`
+      : `¿Eliminar la categoría «${item.name}»? Las plantillas que la usan no se eliminan: quedarán sin categoría y seguirán visibles en «Todas las categorías».`;
+  };
+
+  const renderError = (message: string) => (
+    <div
+      role="alert"
+      className="flex items-start gap-2 bg-red-500/10 border border-red-500/40 text-red-400 p-2.5 rounded-xl text-xs"
+    >
+      <AlertCircle className="w-4 h-4 shrink-0 mt-px" />
+      <span>{message}</span>
+    </div>
+  );
 
   return (
     <div
@@ -187,11 +263,16 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
             <h3 className="text-xs font-bold text-theme-accent flex items-center gap-1.5 uppercase tracking-wider">
               <Briefcase className="w-4 h-4" /> Marcas
             </h3>
+            {brandError && renderError(brandError)}
             <form onSubmit={handleCreateBrand} className="flex gap-2 items-center">
               <input
                 type="text"
                 value={brandName}
-                onChange={(e) => setBrandName(e.target.value)}
+                maxLength={50}
+                onChange={(e) => {
+                  setBrandName(e.target.value);
+                  setBrandError('');
+                }}
                 placeholder="Nueva marca..."
                 className="flex-1 p-2 bg-theme-elevated border border-theme rounded-xl text-xs text-theme-primary placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 transition"
               />
@@ -227,7 +308,11 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                       <input
                         type="text"
                         value={editBrandName}
-                        onChange={(e) => setEditBrandName(e.target.value)}
+                        maxLength={50}
+                        onChange={(e) => {
+                          setEditBrandName(e.target.value);
+                          setBrandError('');
+                        }}
                         className="flex-1 p-1 bg-theme-elevated border border-theme rounded-lg text-xs text-theme-primary focus:outline-none focus:ring-1 focus:ring-theme-accent"
                       />
                       <input
@@ -240,7 +325,7 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                         type="button"
                         onClick={() => handleSaveEditBrand(b.id)}
                         disabled={loadingBrand}
-                        className="p-1.5 text-emerald-400 hover:text-emerald-300 rounded-lg hover:bg-theme-elevated transition"
+                        className="p-1.5 text-emerald-400 hover:text-emerald-300 rounded-lg hover:bg-theme-elevated transition disabled:opacity-50 cursor-pointer"
                         title="Guardar"
                       >
                         <Check className="w-4 h-4" />
@@ -248,7 +333,7 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                       <button
                         type="button"
                         onClick={handleCancelEditBrand}
-                        className="p-1.5 text-theme-muted hover:text-theme-primary rounded-lg hover:bg-theme-elevated transition"
+                        className="p-1.5 text-theme-muted hover:text-theme-primary rounded-lg hover:bg-theme-elevated transition cursor-pointer"
                         title="Cancelar"
                       >
                         <X className="w-4 h-4" />
@@ -275,6 +360,14 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setPendingDelete({ kind: 'brand', id: b.id, name: b.name })}
+                          className="text-theme-muted hover:text-rose-400 p-1 rounded hover:bg-rose-500/10 transition cursor-pointer"
+                          title="Eliminar marca"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </>
                   )}
@@ -288,11 +381,16 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
             <h3 className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider">
               <Tag className="w-4 h-4" /> Categorías
             </h3>
+            {categoryError && renderError(categoryError)}
             <form onSubmit={handleCreateCategory} className="flex gap-2">
               <input
                 type="text"
                 value={categoryName}
-                onChange={(e) => setCategoryName(e.target.value)}
+                maxLength={50}
+                onChange={(e) => {
+                  setCategoryName(e.target.value);
+                  setCategoryError('');
+                }}
                 placeholder="Nueva categoría..."
                 className="flex-1 p-2 bg-theme-elevated border border-theme rounded-xl text-xs text-theme-primary placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 transition"
               />
@@ -316,14 +414,18 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                       <input
                         type="text"
                         value={editCategoryName}
-                        onChange={(e) => setEditCategoryName(e.target.value)}
+                        maxLength={50}
+                        onChange={(e) => {
+                          setEditCategoryName(e.target.value);
+                          setCategoryError('');
+                        }}
                         className="flex-1 p-1 bg-theme-elevated border border-theme rounded-lg text-xs text-theme-primary focus:outline-none focus:ring-1 focus:ring-theme-accent"
                       />
                       <button
                         type="button"
                         onClick={() => handleSaveEditCategory(c.id)}
                         disabled={loadingCategory}
-                        className="p-1.5 text-emerald-400 hover:text-emerald-300 rounded-lg hover:bg-theme-elevated transition"
+                        className="p-1.5 text-emerald-400 hover:text-emerald-300 rounded-lg hover:bg-theme-elevated transition disabled:opacity-50 cursor-pointer"
                         title="Guardar"
                       >
                         <Check className="w-4 h-4" />
@@ -331,7 +433,7 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                       <button
                         type="button"
                         onClick={handleCancelEditCategory}
-                        className="p-1.5 text-theme-muted hover:text-theme-primary rounded-lg hover:bg-theme-elevated transition"
+                        className="p-1.5 text-theme-muted hover:text-theme-primary rounded-lg hover:bg-theme-elevated transition cursor-pointer"
                         title="Cancelar"
                       >
                         <X className="w-4 h-4" />
@@ -340,14 +442,24 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
                   ) : (
                     <>
                       <span className="font-medium">{c.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleStartEditCategory(c)}
-                        className="text-theme-muted hover:text-theme-primary p-1 rounded hover:bg-theme-elevated transition cursor-pointer"
-                        title="Editar categoría"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditCategory(c)}
+                          className="text-theme-muted hover:text-theme-primary p-1 rounded hover:bg-theme-elevated transition cursor-pointer"
+                          title="Editar categoría"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPendingDelete({ kind: 'category', id: c.id, name: c.name })}
+                          className="text-theme-muted hover:text-rose-400 p-1 rounded hover:bg-rose-500/10 transition cursor-pointer"
+                          title="Eliminar categoría"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>
@@ -355,6 +467,18 @@ export const ManageCategoriesModal: React.FC<ManageCategoriesModalProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Confirmación de eliminación, por encima de este modal (sus clics no cierran el modal de gestión) */}
+      <div onClick={(e) => e.stopPropagation()} className="cursor-default">
+        <ConfirmModal
+          isOpen={pendingDelete !== null}
+          title={pendingDelete?.kind === 'brand' ? '¿Eliminar marca?' : '¿Eliminar categoría?'}
+          message={deleteMessage(pendingDelete)}
+          isLoading={isDeletingItem}
+          onConfirm={handleConfirmDeleteItem}
+          onCancel={() => setPendingDelete(null)}
+        />
       </div>
     </div>
   );

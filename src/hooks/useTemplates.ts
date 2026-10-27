@@ -32,6 +32,10 @@ export const useTemplates = () => {
       ]);
       setBrands(brandsData);
       setCategories(categoriesData);
+
+      // Si el filtro activo apunta a una marca/categoría que se eliminó o renombró, vuelve a "Todas"
+      setSelectedBrand((prev) => (prev && !brandsData.some((b) => b.name === prev) ? '' : prev));
+      setSelectedCategory((prev) => (prev && !categoriesData.some((c) => c.name === prev) ? '' : prev));
     } catch (err) {
       console.error('Error al cargar marcas/categorías', err);
     }
@@ -57,19 +61,6 @@ export const useTemplates = () => {
   const refreshAll = useCallback(async () => {
     await Promise.all([fetchMetadata(), fetchTemplates()]);
   }, [fetchMetadata, fetchTemplates]);
-
-  // Limpiar estados al cerrar sesión
-  const clearData = useCallback(() => {
-    setTemplates([]);
-    setBrands([]);
-    setCategories([]);
-    setSelectedBrand('');
-    setSelectedCategory('');
-    setQuery('');
-    setPage(0);
-    setTotalPages(0);
-    setTotalElements(0);
-  }, []);
 
   const handleSetQuery = (val: string) => {
     setQuery(val);
@@ -239,8 +230,9 @@ const handleUpdate = async (id: number, payload: TemplateRequest) => {
     );
 
     try {
-      // 3. Petición al backend
-      await templateApi.updateTemplate(id, payload);
+      // 3. Petición al backend; su respuesta trae brandName/categoryName actualizados
+      const updated = await templateApi.updateTemplate(id, payload);
+      setTemplates((prev) => prev.map((t) => (t.id === id ? updated : t)));
     } catch (err) {
       console.error('Error al actualizar plantilla', err);
       // 4. Rollback en caso de error
@@ -271,6 +263,5 @@ const handleUpdate = async (id: number, payload: TemplateRequest) => {
     handleCreate,
     handleUpdate,
     refreshTemplates: refreshAll,
-    clearData,
   };
 };
