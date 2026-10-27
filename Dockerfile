@@ -1,5 +1,6 @@
 # Etapa 1: Build de la app React
-FROM node:20-alpine AS build
+# Node 22 LTS (Vite 8 requiere Node >= 20.19)
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm install

@@ -5,6 +5,9 @@ import { categoryApi } from '../api/categoryApi';
 import { session } from '../utils/session';
 import type { TemplateResponse, Brand, Category, TemplateRequest } from '../types';
 
+// Plantillas por página (cuadrícula de 3 columnas → 4 filas completas)
+const PAGE_SIZE = 12;
+
 export const useTemplates = () => {
   const [templates, setTemplates] = useState<TemplateResponse[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -34,26 +37,32 @@ export const useTemplates = () => {
       setCategories(categoriesData);
 
       // Si el filtro activo apunta a una marca/categoría que se eliminó o renombró, vuelve a "Todas"
-      setSelectedBrand((prev) => (prev && !brandsData.some((b) => b.name === prev) ? '' : prev));
-      setSelectedCategory((prev) => (prev && !categoriesData.some((c) => c.name === prev) ? '' : prev));
+      // y a la primera página (la página actual podría ya no existir)
+      const brandGone = selectedBrand !== '' && !brandsData.some((b) => b.name === selectedBrand);
+      const categoryGone = selectedCategory !== '' && !categoriesData.some((c) => c.name === selectedCategory);
+      if (brandGone) setSelectedBrand('');
+      if (categoryGone) setSelectedCategory('');
+      if (brandGone || categoryGone) setPage(0);
     } catch (err) {
       console.error('Error al cargar marcas/categorías', err);
     }
-  }, []);
+  }, [selectedBrand, selectedCategory]);
 
-  // Función auxiliar para cargar plantillas desde acciones manuales
-  const fetchTemplates = useCallback(async () => {
+  // Función auxiliar para cargar plantillas desde acciones manuales.
+  // silent: actualiza la lista sin mostrar "Cargando..." (p. ej. reordenar tras copiar)
+  const fetchTemplates = useCallback(async (options?: { silent?: boolean }) => {
     if (!session.getUser()) return;
-    setLoading(true);
+    const silent = options?.silent ?? false;
+    if (!silent) setLoading(true);
     try {
-      const data = await templateApi.searchTemplates(query, selectedBrand, selectedCategory, page, 9);
+      const data = await templateApi.searchTemplates(query, selectedBrand, selectedCategory, page, PAGE_SIZE);
       setTemplates(data.content);
       setTotalPages(data.totalPages);
       setTotalElements(data.totalElements);
     } catch (err) {
       console.error('Error al consultar plantillas', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [query, selectedBrand, selectedCategory, page]);
 
@@ -118,7 +127,7 @@ useEffect(() => {
     });
 
     templateApi
-      .searchTemplates(query, selectedBrand, selectedCategory, page, 9)
+      .searchTemplates(query, selectedBrand, selectedCategory, page, PAGE_SIZE)
       .then((data) => {
         if (!ignore) {
           setTemplates(data.content);
@@ -159,19 +168,26 @@ useEffect(() => {
     setCopiedId(templateId);
     setTimeout(() => setCopiedId(null), 2000);
 
-    // 2. Incremento optimista en la lista local
+    // 2. Incremento optimista y reordenación inmediata: las más usadas primero
+    //    (sort es estable: a igual uso se conserva el orden que dio el servidor)
     setTemplates((prev) =>
-      prev.map((t) =>
-        t.id === templateId
-          ? { ...t, usageCount: (t.usageCount || 0) + 1 }
-          : t
-      )
+      prev
+        .map((t) =>
+          t.id === templateId
+            ? { ...t, usageCount: (t.usageCount || 0) + 1 }
+            : t
+        )
+        .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
     );
 
-    // 3. Notificación en segundo plano al backend (si falla, el texto ya se copió)
-    templateApi.incrementUsage(templateId).catch((err) => {
-      console.error('Error al registrar el uso de la plantilla', err);
-    });
+    // 3. Registro en el backend y, al confirmarse, recarga silenciosa para alinear el orden con
+    //    el servidor (p. ej. si la plantilla pasa a otra página). Si falla, el texto ya se copió.
+    templateApi
+      .incrementUsage(templateId)
+      .then(() => fetchTemplates({ silent: true }))
+      .catch((err) => {
+        console.error('Error al registrar el uso de la plantilla', err);
+      });
     return true;
   };
 

@@ -58,6 +58,7 @@ export default function DashboardPage() {
     page,
     setPage,
     totalPages,
+    totalElements,
     copiedId,
     loading,
     handleCopy,
@@ -230,6 +231,7 @@ export default function DashboardPage() {
               <Pagination
                 currentPage={page}
                 totalPages={totalPages}
+                totalElements={totalElements}
                 onPageChange={setPage}
               />
             </>

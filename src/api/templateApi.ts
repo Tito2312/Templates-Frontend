@@ -7,7 +7,7 @@ export const templateApi = {
     brand: string = '',
     category: string = '',
     page: number = 0,
-    size: number = 9
+    size: number = 12
   ): Promise<PaginatedResponse<TemplateResponse>> => {
     const { data } = await httpClient.get<PaginatedResponse<TemplateResponse>>('/templates', {
       params: { query, brand, category, page, size },

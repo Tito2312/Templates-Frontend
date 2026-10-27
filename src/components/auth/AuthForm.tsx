@@ -89,7 +89,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onToggleMode }) => {
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Ej. jorge"
+              placeholder="Tu nombre de usuario"
               className={inputClass}
             />
           </div>
