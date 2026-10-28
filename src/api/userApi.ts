@@ -40,8 +40,9 @@ export const userApi = {
     return data.user;
   },
 
-  getUserById: async (id: number): Promise<User> => {
-    const { data } = await httpClient.get<User>(`/users/${id}`);
+  // Usuario autenticado según el servidor (incluye el rol vigente)
+  me: async (): Promise<User> => {
+    const { data } = await httpClient.get<User>('/users/me');
     return data;
   },
 };

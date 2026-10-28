@@ -37,3 +37,64 @@
     background-color: var(--color-primary-hover, #4f46e5);
   }
 }
+
+/* ===== Página de inicio: división diagonal (HomePage) =====
+   data-mode="login": mensaje a la izquierda, formulario a la derecha.
+   data-mode="register": intercambian lados con una transición. */
+
+/* Móvil: apilado, el mensaje arriba con el borde inferior en diagonal */
+.home-welcome {
+  clip-path: polygon(0 0, 100% 0, 100% 88%, 0 100%);
+}
+
+@media (min-width: 768px) {
+  .home-welcome,
+  .home-form {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    transition-duration: 700ms;
+    transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .home-welcome {
+    left: 0;
+    width: 58%;
+    clip-path: polygon(0 0, 100% 0, 82% 100%, 0 100%);
+    transition-property: left, clip-path;
+  }
+
+  .home-welcome-content {
+    padding-left: clamp(2rem, 6vw, 6rem);
+    padding-right: 24%;
+    transition: padding 700ms cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .home-form {
+    right: 0;
+    width: 42%;
+    transition-property: right;
+  }
+
+  .home[data-mode='register'] .home-welcome {
+    left: 42%;
+    clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%);
+  }
+
+  .home[data-mode='register'] .home-welcome-content {
+    padding-left: 26%;
+    padding-right: clamp(2rem, 6vw, 6rem);
+  }
+
+  .home[data-mode='register'] .home-form {
+    right: 58%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-welcome,
+  .home-form,
+  .home-welcome-content {
+    transition: none;
+  }
+}

@@ -5,6 +5,9 @@ import { categoryApi } from '../api/categoryApi';
 import { session } from '../utils/session';
 import type { TemplateResponse, Brand, Category, TemplateRequest } from '../types';
 
+// Plantillas por página (cuadrícula de 3 columnas → 4 filas completas)
+const PAGE_SIZE = 12;
+
 export const useTemplates = () => {
   const [templates, setTemplates] = useState<TemplateResponse[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -32,24 +35,34 @@ export const useTemplates = () => {
       ]);
       setBrands(brandsData);
       setCategories(categoriesData);
+
+      // Si el filtro activo apunta a una marca/categoría que se eliminó o renombró, vuelve a "Todas"
+      // y a la primera página (la página actual podría ya no existir)
+      const brandGone = selectedBrand !== '' && !brandsData.some((b) => b.name === selectedBrand);
+      const categoryGone = selectedCategory !== '' && !categoriesData.some((c) => c.name === selectedCategory);
+      if (brandGone) setSelectedBrand('');
+      if (categoryGone) setSelectedCategory('');
+      if (brandGone || categoryGone) setPage(0);
     } catch (err) {
       console.error('Error al cargar marcas/categorías', err);
     }
-  }, []);
+  }, [selectedBrand, selectedCategory]);
 
-  // Función auxiliar para cargar plantillas desde acciones manuales
-  const fetchTemplates = useCallback(async () => {
+  // Función auxiliar para cargar plantillas desde acciones manuales.
+  // silent: actualiza la lista sin mostrar "Cargando..." (p. ej. reordenar tras copiar)
+  const fetchTemplates = useCallback(async (options?: { silent?: boolean }) => {
     if (!session.getUser()) return;
-    setLoading(true);
+    const silent = options?.silent ?? false;
+    if (!silent) setLoading(true);
     try {
-      const data = await templateApi.searchTemplates(query, selectedBrand, selectedCategory, page, 9);
+      const data = await templateApi.searchTemplates(query, selectedBrand, selectedCategory, page, PAGE_SIZE);
       setTemplates(data.content);
       setTotalPages(data.totalPages);
       setTotalElements(data.totalElements);
     } catch (err) {
       console.error('Error al consultar plantillas', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [query, selectedBrand, selectedCategory, page]);
 
@@ -57,19 +70,6 @@ export const useTemplates = () => {
   const refreshAll = useCallback(async () => {
     await Promise.all([fetchMetadata(), fetchTemplates()]);
   }, [fetchMetadata, fetchTemplates]);
-
-  // Limpiar estados al cerrar sesión
-  const clearData = useCallback(() => {
-    setTemplates([]);
-    setBrands([]);
-    setCategories([]);
-    setSelectedBrand('');
-    setSelectedCategory('');
-    setQuery('');
-    setPage(0);
-    setTotalPages(0);
-    setTotalElements(0);
-  }, []);
 
   const handleSetQuery = (val: string) => {
     setQuery(val);
@@ -127,7 +127,7 @@ useEffect(() => {
     });
 
     templateApi
-      .searchTemplates(query, selectedBrand, selectedCategory, page, 9)
+      .searchTemplates(query, selectedBrand, selectedCategory, page, PAGE_SIZE)
       .then((data) => {
         if (!ignore) {
           setTemplates(data.content);
@@ -152,49 +152,49 @@ useEffect(() => {
   }, [query, selectedBrand, selectedCategory, page]);
 
   // Acciones
- const handleCopy = async (template: TemplateResponse) => {
-    // 1. Copia al portapapeles y actualización optimista de UI
+  /**
+   * Copia el texto al portapapeles y registra el uso.
+   * Devuelve false si el navegador no permitió copiar (no se cuenta el uso en ese caso).
+   */
+  const copyAndCountUsage = async (templateId: number, text: string): Promise<boolean> => {
+    // 1. Copia al portapapeles
     try {
-      await navigator.clipboard.writeText(template.content);
-      setCopiedId(template.id);
-      setTimeout(() => setCopiedId(null), 2000);
-
-      // Incremento optimista en la lista local
-      setTemplates((prev) =>
-        prev.map((t) =>
-          t.id === template.id
-            ? { ...t, usageCount: (t.usageCount || 0) + 1 }
-            : t
-        )
-      );
-
-      // 2. Notificación en segundo plano al backend
-      await templateApi.incrementUsage(template.id);
+      await navigator.clipboard.writeText(text);
     } catch (err) {
       console.error('Error al copiar', err);
+      return false;
     }
-  };
 
-const handleCopyFormatted = async (templateId: number, formattedContent: string) => {
-    try {
-      await navigator.clipboard.writeText(formattedContent);
-      setCopiedId(templateId);
-      setTimeout(() => setCopiedId(null), 2000);
+    setCopiedId(templateId);
+    setTimeout(() => setCopiedId(null), 2000);
 
-      // Incremento optimista en la lista local
-      setTemplates((prev) =>
-        prev.map((t) =>
+    // 2. Incremento optimista y reordenación inmediata: las más usadas primero
+    //    (sort es estable: a igual uso se conserva el orden que dio el servidor)
+    setTemplates((prev) =>
+      prev
+        .map((t) =>
           t.id === templateId
             ? { ...t, usageCount: (t.usageCount || 0) + 1 }
             : t
         )
-      );
+        .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
+    );
 
-      await templateApi.incrementUsage(templateId);
-    } catch (err) {
-      console.error('Error al copiar texto formateado', err);
-    }
+    // 3. Registro en el backend y, al confirmarse, recarga silenciosa para alinear el orden con
+    //    el servidor (p. ej. si la plantilla pasa a otra página). Si falla, el texto ya se copió.
+    templateApi
+      .incrementUsage(templateId)
+      .then(() => fetchTemplates({ silent: true }))
+      .catch((err) => {
+        console.error('Error al registrar el uso de la plantilla', err);
+      });
+    return true;
   };
+
+  const handleCopy = (template: TemplateResponse) => copyAndCountUsage(template.id, template.content);
+
+  const handleCopyFormatted = (templateId: number, formattedContent: string) =>
+    copyAndCountUsage(templateId, formattedContent);
 
 const handleDelete = async (id: number) => {
     // 1. Guardar copia del estado previo para rollback
@@ -239,8 +239,9 @@ const handleUpdate = async (id: number, payload: TemplateRequest) => {
     );
 
     try {
-      // 3. Petición al backend
-      await templateApi.updateTemplate(id, payload);
+      // 3. Petición al backend; su respuesta trae brandName/categoryName actualizados
+      const updated = await templateApi.updateTemplate(id, payload);
+      setTemplates((prev) => prev.map((t) => (t.id === id ? updated : t)));
     } catch (err) {
       console.error('Error al actualizar plantilla', err);
       // 4. Rollback en caso de error
@@ -271,6 +272,5 @@ const handleUpdate = async (id: number, payload: TemplateRequest) => {
     handleCreate,
     handleUpdate,
     refreshTemplates: refreshAll,
-    clearData,
   };
 };

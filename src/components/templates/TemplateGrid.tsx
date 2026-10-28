@@ -7,8 +7,8 @@ interface TemplateGridProps {
   templates: TemplateResponse[];
   copiedId: number | null;
   onCopy: (template: TemplateResponse) => void;
-  onDelete: (id: number) => void;
-  onEdit: (template: TemplateResponse) => void;
+  onDelete?: (id: number) => void;
+  onEdit?: (template: TemplateResponse) => void;
   themeColor?: string;
 }
 

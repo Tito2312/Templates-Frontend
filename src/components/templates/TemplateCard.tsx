@@ -7,7 +7,8 @@ interface TemplateCardProps {
   template: TemplateResponse;
   isCopied: boolean;
   onCopy: (template: TemplateResponse) => void;
-  onDelete: (id: number) => void;
+  // Editar/eliminar solo se pasan a administradores
+  onDelete?: (id: number) => void;
   onEdit?: (template: TemplateResponse) => void;
   themeColor?: string;
 }
@@ -55,13 +56,15 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
                 <Pencil className="w-4 h-4" />
               </button>
             )}
-            <button
-              onClick={() => onDelete(template.id)}
-              title="Eliminar plantilla"
-              className="text-theme-muted hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition cursor-pointer"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            {onDelete && (
+              <button
+                onClick={() => onDelete(template.id)}
+                title="Eliminar plantilla"
+                className="text-theme-muted hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
